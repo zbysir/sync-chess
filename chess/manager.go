@@ -88,6 +88,12 @@ func (p *Manager) StartSupervise() {
 				// 有人胡牌就结束,可能是多个人胡
 				goto end
 			}
+
+			// 若没人动作 下家摸牌
+
+			firstPlayer = p.Players.After(firstPlayer)
+			// todo 摸牌
+			goto startRound
 		case AT_Gang:
 			// 抢杠胡(补杠)
 			card := a.Card

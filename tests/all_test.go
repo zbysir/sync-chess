@@ -4,6 +4,7 @@ import (
 	"testing"
 	"github.com/bysir-zl/sync-chess/chess"
 	"time"
+	"regexp"
 )
 
 // 验证 当有碰有胡时 胡优先
@@ -274,7 +275,7 @@ func TestPlayPengHuErr(t *testing.T) {
 	// 模拟玩家3可胡
 	p3.CanActions = chess.ActionTypes{chess.AT_Hu, chess.AT_Pass}
 	// 玩家2可碰
-	p2.CanActions = chess.ActionTypes{chess.AT_Peng}
+	p2.CanActions = chess.ActionTypes{chess.AT_Peng, chess.AT_Pass}
 
 	{
 		// 又发送错误的出牌动作,由于一次只能有一个待处理命令,所以
@@ -296,23 +297,22 @@ func TestPlayPengHuErr(t *testing.T) {
 			Card:       100,
 		})
 	case 2:
-		// 另: 玩家3点pass
-		// 期望是 玩家2碰了,玩家2出牌
+		// 玩家3点pass
+		// 等待玩家2 碰
 		p3.WriteAction(&chess.PlayerAction{
 			ActionType: chess.AT_Pass,
 			Card:       100,
 		})
 	}
 
-	// 这时候玩家2碰
+	// 这时候玩家2pass
 	time.Sleep(1 * time.Millisecond)
 	p2.WriteAction(&chess.PlayerAction{
-		ActionType: chess.AT_Peng,
+		ActionType: chess.AT_Pass,
 		Card:       100,
 	})
 
-
-
+	// 轮到玩家2打牌了
 	p2.CanActions = chess.ActionTypes{chess.AT_Play}
 	time.Sleep(1 * time.Millisecond)
 	p2.WriteAction(&chess.PlayerAction{

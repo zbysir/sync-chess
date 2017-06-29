@@ -30,6 +30,19 @@ func (p *Players) Exclude(players ...*Player) (ps Players) {
 	return
 }
 
+// 得到下家
+func (p *Players) After(currPlayer *Player) (player *Player) {
+	player = (*p)[0]
+	l := len(*p)
+	for i := 0; i < l-1; i++ {
+		if (*p)[i] == currPlayer {
+			player = (*p)[i+1]
+		}
+	}
+
+	return
+}
+
 func (p *Player) GetCanActions(isMyPlay bool, card uint16) ActionTypes {
 	return p.CanActions
 }

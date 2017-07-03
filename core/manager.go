@@ -70,6 +70,8 @@ func (p *Manager) StartSupervise() {
 				case AT_Pass:
 					continue
 				case AT_Gang:
+					// 胡牌和杠碰是互斥的
+					// 胡过之后就不能杠碰
 					if !isHasHu {
 						// todo 摸牌
 						firstPlayer = player

@@ -4,7 +4,6 @@ import (
 	"testing"
 	"github.com/bysir-zl/sync-chess/chess"
 	"time"
-	"regexp"
 )
 
 // 验证 当有碰有胡时 胡优先

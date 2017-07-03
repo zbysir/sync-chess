@@ -1,4 +1,4 @@
-package chess
+package core
 
 import (
 	"context"
@@ -90,7 +90,6 @@ func (p *Manager) StartSupervise() {
 			}
 
 			// 若没人动作 下家摸牌
-
 			firstPlayer = p.Players.After(firstPlayer)
 			// todo 摸牌
 			goto startRound
@@ -181,6 +180,14 @@ func (p *Manager) GetPlayerAction(context context.Context, player *Player, canAc
 // 开启接收玩家消息
 func (p *Manager) OpenPlayerAction(player *Player) {
 	player.IsCanReceive = true
+	// 清空缓存
+	for {
+		select {
+		case <-player.Reader:
+		default:
+			return
+		}
+	}
 }
 
 // 关闭接收玩家消息

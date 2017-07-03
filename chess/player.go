@@ -1,50 +1,46 @@
 package chess
 
-import (
-	"time"
-)
+import "github.com/bysir-zl/sync-chess/core"
 
 type Player struct {
-	Name         string
-	Reader       chan *PlayerAction
-	IsCanReceive bool // 只有在 接收 中的玩家能向服务器发送数据
-	CanActions   ActionTypes
+	Name   string
+	Reader chan *core.PlayerAction
 }
 
-type Players []*Player
-
-// 排除
-func (p *Players) Exclude(players ...*Player) (ps Players) {
-	ps = Players{}
-	for _, player := range *p {
-		isExclude := false
-		for _, eplayer := range players {
-			if eplayer == player {
-				isExclude = true
-			}
-		}
-		if !isExclude {
-			ps = append(ps, player)
-		}
-	}
-	return
+func (p *Player) Peng(player core.Player, card core.Card) (err error) {
+	panic("implement me")
 }
 
-// 得到下家
-func (p *Players) After(currPlayer *Player) (player *Player) {
-	player = (*p)[0]
-	l := len(*p)
-	for i := 0; i < l-1; i++ {
-		if (*p)[i] == currPlayer {
-			player = (*p)[i+1]
-		}
-	}
-
-	return
+func (p *Player) GangDian(player core.Player, card core.Card) {
+	panic("implement me")
 }
 
-func (p *Player) GetCanActions(isMyPlay bool, card uint16) ActionTypes {
-	return p.CanActions
+func (p *Player) GangBu(card core.Card) {
+	panic("implement me")
+}
+
+func (p *Player) GangZi(card core.Card) {
+	panic("implement me")
+}
+
+func (p *Player) HuZiMo(card core.Card) {
+	panic("implement me")
+}
+
+func (p *Player) HuDian(player core.Player, c core.Card) {
+	panic("implement me")
+}
+
+func (p *Player) HuQiangGang(player core.Player, c core.Card) {
+	panic("implement me")
+}
+
+func (p *Player) CanActions(isRounder bool) core.ActionTypes {
+	panic("implement me")
+}
+
+func (p *Player) RequestAction(actions core.ActionTypes) (playerAction core.PlayerAction) {
+	panic("implement me")
 }
 
 func (p *Player) String() (s string) {
@@ -52,39 +48,8 @@ func (p *Player) String() (s string) {
 	return
 }
 
-func (p *Player) WriteAction(action *PlayerAction) bool {
-	if !p.IsCanReceive {
-		return false
-	}
-	select {
-	case p.Reader <- action:
-	default:
-		return false
-	}
-	return true
-}
-
-func (p *Player) Query(actions []ActionType) {
-	return
-}
-
-func (p *Player) Read() (playerAction *PlayerAction) {
-	playerAction = <-p.Reader
-	return
-}
-
-func (p *Player) HandleAction(actions []ActionType) (playerAction *PlayerAction) {
-	playerAction = &PlayerAction{
-		ActionType: actions[0],
-		Card:       100,
-	}
-	// 模拟玩家出牌需要1s
-	time.Sleep(1 * time.Second)
-	return
-}
-
 func NewPlayer() *Player {
 	return &Player{
-		Reader: make(chan *PlayerAction, 1),
+		Reader: make(chan *core.PlayerAction, 1),
 	}
 }

@@ -10,7 +10,7 @@ import (
 // 一个房间一个Manager
 type Manager struct {
 	Players         Players
-	PlayerActionLog []*PlayerAction // 成功操作的玩家动作记录, 用与回放 恢复场景 和 检查杠上花等
+	PlayerActionLog []*PlayerActionRequest // 成功操作的玩家动作记录, 用与回放 恢复场景 和 检查杠上花等
 }
 
 type WaitActionPlayer struct {
@@ -44,7 +44,7 @@ func (p *Manager) StartSupervise() {
 		}
 		log.Printf("GetPlayerAction %+v %+v", firstPlayer, a)
 
-		switch a.ActionType {
+		switch a.Types {
 		case AT_Play:
 			// 出牌, 通知其他人
 			card := a.Card
@@ -66,7 +66,7 @@ func (p *Manager) StartSupervise() {
 				player := wap.Player
 				a, _ := p.GetPlayerAction(ctx, player, wap.CanActions)
 				log.Printf("GetPlayerAction %+v %+v", player, a)
-				switch a.ActionType {
+				switch a.Types {
 				case AT_Pass:
 					continue
 				case AT_Gang:
@@ -116,7 +116,7 @@ func (p *Manager) StartSupervise() {
 					player := wap.Player
 					a, _ := p.GetPlayerAction(ctx, player, wap.CanActions)
 					log.Printf("GetPlayerAction %+v %+v", player, a)
-					switch a.ActionType {
+					switch a.Types {
 					case AT_Pass:
 						continue
 					case AT_Hu:
@@ -159,7 +159,7 @@ func (p *Manager) GetCanActions(player *Player, isFirst bool, card uint16) (acti
 }
 
 // 阻塞获取玩家动作
-func (p *Manager) GetPlayerAction(context context.Context, player *Player, canActions ActionTypes) (action *PlayerAction, err error) {
+func (p *Manager) GetPlayerAction(context context.Context, player *Player, canActions ActionTypes) (action *PlayerActionRequest, err error) {
 	for {
 		select {
 		case <-context.Done():

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"log"
+	"time"
 )
 
 // 管理员管理整个打牌逻辑
@@ -14,9 +15,11 @@ type Manager struct {
 }
 
 type WaitActionPlayer struct {
-	Player     *Player
+	Player     Player
 	CanActions ActionTypes
 }
+
+var timeout = time.Second * 15
 
 // 开始监督
 func (p *Manager) StartSupervise() {
@@ -26,35 +29,36 @@ func (p *Manager) StartSupervise() {
 	ctx := context.Background()
 
 	// 设置第一个出牌者
-	firstPlayer := p.Players[0]
+	roundPlayer := p.Players[0]
 	// 胡牌才会结束
 	for {
 	startRound:
 		for _, player := range p.Players {
-			p.ClosePlayerAction(player)
+			p.ClearPlayerMessage(player)
 		}
 
-		as := p.GetCanActions(firstPlayer, true, 0)
-		p.NotifyNeedAction(firstPlayer, as)
+		as := p.GetCanActions(roundPlayer, true, 0)
+		p.NotifyNeedAction(roundPlayer, as)
+
 	get:
-		a, err := p.GetPlayerAction(ctx, firstPlayer, as)
+		a, err := p.GetPlayerAction(ctx, roundPlayer, as)
 		if err != nil {
 			log.Printf("GetPlayerAction err %+v", err)
 			goto get
 		}
-		log.Printf("GetPlayerAction %+v %+v", firstPlayer, a)
+		log.Printf("GetPlayerAction %+v %+v", roundPlayer, a)
 
 		switch a.Types {
 		case AT_Play:
 			// 出牌, 通知其他人
 			card := a.Card
 			waitActionPlayer := []WaitActionPlayer{}
-			for _, player := range p.Players.Exclude(firstPlayer) {
+			for _, player := range p.Players.Exclude(roundPlayer) {
 				as := p.GetCanActions(player, false, card)
 				if len(as) != 0 {
 					p.NotifyNeedAction(player, as)
 					// 胡牌优先选择
-					if as.Contain(AT_Hu) {
+					if as.Contain(AT_HuDian) {
 						waitActionPlayer = append([]WaitActionPlayer{{Player: player, CanActions: as}}, waitActionPlayer...)
 					} else {
 						waitActionPlayer = append(waitActionPlayer, WaitActionPlayer{Player: player, CanActions: as})
@@ -64,26 +68,36 @@ func (p *Manager) StartSupervise() {
 			isHasHu := false
 			for _, wap := range waitActionPlayer {
 				player := wap.Player
-				a, _ := p.GetPlayerAction(ctx, player, wap.CanActions)
+				ctxTime, _ := context.WithTimeout(ctx, timeout)
+			retry:
+				a, err := p.GetPlayerAction(ctxTime, player, wap.CanActions)
+				if err != nil {
+					a = player.RequestActionAuto(wap.CanActions)
+				}
 				log.Printf("GetPlayerAction %+v %+v", player, a)
 				switch a.Types {
 				case AT_Pass:
 					continue
-				case AT_Gang:
+				case AT_GangDian:
 					// 胡牌和杠碰是互斥的
 					// 胡过之后就不能杠碰
 					if !isHasHu {
 						// todo 摸牌
-						firstPlayer = player
+						roundPlayer = player
 						goto startRound
 					}
 				case AT_Peng:
 					if !isHasHu {
-						firstPlayer = player
+						roundPlayer = player
 						goto startRound
 					}
-				case AT_Hu:
+				case AT_HuDian:
 					isHasHu = true
+					rsp := player.DoAction(a, roundPlayer)
+					if rsp.Err != nil {
+						goto retry
+					}
+					player.ResponseAction(rsp)
 				}
 			}
 			if isHasHu {
@@ -92,48 +106,50 @@ func (p *Manager) StartSupervise() {
 			}
 
 			// 若没人动作 下家摸牌
-			firstPlayer = p.Players.After(firstPlayer)
+			roundPlayer = p.Players.After(roundPlayer)
 			// todo 摸牌
 			goto startRound
-		case AT_Gang:
+		case AT_GangAn:
+
+		case AT_GangBu:
 			// 抢杠胡(补杠)
 			card := a.Card
-			isBuGang := true
-			if isBuGang {
-				// 判断其他玩家有不有胡
-				waitActionPlayer := []WaitActionPlayer{}
-				for _, player := range p.Players.Exclude(firstPlayer) {
-					as := p.GetCanActions(player, false, card)
-					if as.Contain(AT_Hu) {
-						p.NotifyNeedAction(player, ActionTypes{AT_Hu, AT_Pass})
-						waitActionPlayer = append(waitActionPlayer, WaitActionPlayer{Player: player, CanActions: as})
-					}
+			// 判断其他玩家有不有胡
+			waitActionPlayer := []WaitActionPlayer{}
+			for _, player := range p.Players.Exclude(roundPlayer) {
+				as := p.GetCanActions(player, false, card)
+				if as.Contain(AT_HuDian) {
+					as = ActionTypes{AT_HuQiangGang, AT_Pass}
+					p.NotifyNeedAction(player, as)
+					waitActionPlayer = append(waitActionPlayer, WaitActionPlayer{Player: player, CanActions: as})
 				}
+			}
 
-				isHasHu := false
-				// 有玩家可胡,就获取玩家操作
-				for _, wap := range waitActionPlayer {
-					player := wap.Player
-					a, _ := p.GetPlayerAction(ctx, player, wap.CanActions)
-					log.Printf("GetPlayerAction %+v %+v", player, a)
-					switch a.Types {
-					case AT_Pass:
-						continue
-					case AT_Hu:
-						isHasHu = true
-					}
+			isHasHu := false
+			// 有玩家可胡,就获取玩家操作
+			for _, wap := range waitActionPlayer {
+				player := wap.Player
+				a, _ := p.GetPlayerAction(ctx, player, wap.CanActions)
+				log.Printf("GetPlayerAction %+v %+v", player, a)
+				switch a.Types {
+				case AT_Pass:
+					continue
+				case AT_HuQiangGang:
+					rsp := player.DoAction(a, roundPlayer)
+					player.ResponseAction(rsp)
+					isHasHu = true
 				}
-				if isHasHu {
-					// 有人胡牌就结束,可能是多个人胡
-					goto end
-				}
+			}
+			if isHasHu {
+				// 有人胡牌就结束,可能是多个人胡
+				goto end
 			}
 
 			// todo 摸牌
 			goto startRound
 		case AT_Peng:
 			goto startRound
-		case AT_Hu:
+		case AT_HuZiMo:
 			// 胡牌就结束
 			goto end
 		}
@@ -143,8 +159,12 @@ end:
 	log.Printf("end ")
 }
 
-func (p *Manager) NotifyNeedAction(player *Player, actions []ActionType) {
-	p.OpenPlayerAction(player)
+// 响应玩家出牌动作
+func (p *Manager) ResponsePlayer(player Player, response *PlayerActionResponse) {
+
+}
+
+func (p *Manager) NotifyNeedAction(player Player, actions []ActionType) {
 
 	log.Printf("NeedAction %+v %+v", player, actions)
 
@@ -153,13 +173,13 @@ func (p *Manager) NotifyNeedAction(player *Player, actions []ActionType) {
 
 // isFirst 是否该他出牌
 // card 能够吃的牌(其他人打来的)
-func (p *Manager) GetCanActions(player *Player, isFirst bool, card uint16) (actions ActionTypes) {
+func (p *Manager) GetCanActions(player Player, isFirst bool, card Card) (actions ActionTypes) {
 	actions = player.GetCanActions(isFirst, card)
 	return
 }
 
 // 阻塞获取玩家动作
-func (p *Manager) GetPlayerAction(context context.Context, player *Player, canActions ActionTypes) (action *PlayerActionRequest, err error) {
+func (p *Manager) GetPlayerAction(context context.Context, player Player, canActions ActionTypes) (action *PlayerActionRequest, err error) {
 	for {
 		select {
 		case <-context.Done():
@@ -171,8 +191,6 @@ func (p *Manager) GetPlayerAction(context context.Context, player *Player, canAc
 			if !canActions.Contain(playerAction.ActionType) {
 				continue
 			}
-			// 接收成功一次就关闭接收
-			p.ClosePlayerAction(player)
 			action = playerAction
 			return
 		}
@@ -180,8 +198,7 @@ func (p *Manager) GetPlayerAction(context context.Context, player *Player, canAc
 }
 
 // 开启接收玩家消息
-func (p *Manager) OpenPlayerAction(player *Player) {
-	player.IsCanReceive = true
+func (p *Manager) ClearPlayerMessage(player Player) {
 	// 清空缓存
 	for {
 		select {
@@ -190,9 +207,4 @@ func (p *Manager) OpenPlayerAction(player *Player) {
 			return
 		}
 	}
-}
-
-// 关闭接收玩家消息
-func (p *Manager) ClosePlayerAction(player *Player) {
-	player.IsCanReceive = false
 }

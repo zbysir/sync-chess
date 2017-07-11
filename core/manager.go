@@ -10,8 +10,11 @@ import (
 // 命令该谁出牌
 // 一个房间一个Manager
 type Manager struct {
-	Players         Players
-	PlayerActionLog []*PlayerActionRequest // 成功操作的玩家动作记录, 用与回放 恢复场景 和 检查杠上花等
+	Id               string        // 管理员唯一标示
+	Players          Players       // 所有玩家
+	RoundStartPlayer Player        // 每轮开始玩家
+	CardGenerator    CardGenerator // 发牌器
+	Storage
 }
 
 type WaitActionPlayer struct {
@@ -28,13 +31,29 @@ func (p *Manager) StartSupervise() {
 	}
 	ctx := context.Background()
 
+	needLoadStorage := true
+
 	// 设置第一个出牌者
 	roundPlayer := p.Players[0]
+	// 是否需要从Storage装载玩家动作, 用于down机恢复
+	if needLoadStorage {
+		// 读取存档
+		p.Recovery()
+	}
+
 	// 胡牌才会结束
 	for {
 	startRound:
 		for _, player := range p.Players {
 			p.ClearPlayerMessage(player)
+		}
+
+		// 不需要读存档 说明不是第一次运行的现场恢复,则需要存档
+		if !needLoadStorage {
+			// 存档
+			p.SnapShoot()
+		} else {
+			needLoadStorage = false
 		}
 
 		as := p.GetCanActions(roundPlayer, true, 0)
@@ -71,6 +90,7 @@ func (p *Manager) StartSupervise() {
 				ctxTime, _ := context.WithTimeout(ctx, timeout)
 			retry:
 				a, err := p.GetPlayerAction(ctxTime, player, wap.CanActions)
+				// 超时未响应则执行自动打牌
 				if err != nil {
 					a = player.RequestActionAuto(wap.CanActions)
 				}
@@ -97,6 +117,7 @@ func (p *Manager) StartSupervise() {
 					if rsp.Err != nil {
 						goto retry
 					}
+					p.Step(player, a)
 					player.ResponseAction(rsp)
 				}
 			}

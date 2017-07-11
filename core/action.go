@@ -7,7 +7,7 @@ const (
 	AT_Get         ActionType = iota + 1 // 摸牌, 服务器不会下发这个命令 而是自动(比如杠牌后)下发通知告知玩家摸了那张牌
 	AT_Play                              // 出牌
 	AT_Peng                              // 碰
-	AT_GangDian                          // 就是直杠
+	AT_GangDian                          // 直杠
 	AT_GangAn                            // 并且手上有三张了 就是暗杠;
 	AT_GangBu                            // 是自摸的牌 并且是碰过的就是补杠
 	AT_HuDian                            // 点炮

@@ -3,6 +3,8 @@ package core
 import "context"
 
 type Player interface {
+	SetCards(cards Cards)
+
 	// 获能进行的动作,应该根据手上的牌判断返回
 	// isRounder是否该你出牌
 	// card 别人打的牌
@@ -44,7 +46,7 @@ type PlayerActionRequest struct {
 
 // 玩家动作相应
 type PlayerActionResponse struct {
-	types ActionType
+	Types ActionType
 	Err   error // 有错误将特殊处理
 	Card  Card  // 动作哪张牌
 }

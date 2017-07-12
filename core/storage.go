@@ -1,6 +1,6 @@
 package core
 
-import "log"
+import "github.com/bysir-zl/bygo/log"
 
 // 用于保存牌局, 实现down机恢复, 重放等功能
 type Storage struct {
@@ -12,9 +12,9 @@ type Storage struct {
 func (p *Storage) SnapShoot() {
 	players := p.manager.Players
 	roundStartPlayer := p.manager.RoundStartPlayer
-	surplusCards := p.manager.CardGenerator.GetCards()
+	surplusCards := p.manager.CardGenerator.GetCardsSurplus()
 
-	log.Print("Storage SnapShoot ", players, roundStartPlayer, surplusCards)
+	log.Info("Storage SnapShoot ", players, roundStartPlayer, surplusCards)
 }
 
 // 恢复快照,并且读取待运行的操作
@@ -23,7 +23,7 @@ func (p *Storage) Recovery() (has bool) {
 	//roundStartPlayer := p.manager.RoundStartPlayer
 	//surplusCards := p.manager.CardGenerator.GetCards()
 
-	log.Print("Storage Recoveryed " )
+	log.Info("Storage Recoveryed " )
 	return
 }
 
@@ -33,13 +33,13 @@ func (p *Storage) Clean() {
 	//roundStartPlayer := p.manager.RoundStartPlayer
 	//surplusCards := p.manager.CardGenerator.GetCards()
 
-	log.Print("Storage Cleaned " )
+	log.Info("Storage Cleaned " )
 	return
 }
 
 // 保存玩家操作日志
 func (p *Storage) Step(player Player, request *PlayerActionRequest) {
-	log.Print("Storage Step ", player, request)
+	log.Info("Storage Step ", player, request)
 }
 
 func NewStorage(manager *Manager) *Storage {

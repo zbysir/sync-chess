@@ -4,22 +4,33 @@ import (
 	"github.com/bysir-zl/sync-chess/core"
 	"context"
 	"errors"
+	"github.com/bysir-zl/bygo/log"
+	"fmt"
 )
 
 type Player struct {
-	Name       string
-	Reader     chan *core.PlayerActionRequest
-	cards      core.Cards
-	isOpenRecv bool
+	Name          string
+	Reader        chan *core.PlayerActionRequest
+	cards         core.Cards
+	isOpenReceive bool
+	data          map[string]interface{}
 }
 
 func (p *Player) CanActions(isRounder bool, card core.Card) core.ActionTypes {
-	panic("implement me")
+	as := core.ActionTypes{}
+	if isRounder {
+		as = append(as, core.AT_Pass, core.AT_Play)
+	} else {
+		as = append(as, core.AT_Pass)
+	}
+
+	return as
 }
 
 // 通知玩家动作
-func (p *Player) NotifyNeedAction(types core.ActionTypes) {
-	p.isOpenRecv = true
+func (p *Player) NotifyNeedAction(actions core.ActionTypes) {
+	p.isOpenReceive = true
+	log.Info("NeedAction", "%+v %+v", p, actions)
 	return
 }
 
@@ -28,10 +39,10 @@ func (p *Player) WaitAction(ctx context.Context) (playerAction *core.PlayerActio
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
-		p.isOpenRecv = false
+		p.isOpenReceive = false
 		return
 	case playerAction = <-p.Reader:
-		p.isOpenRecv = false
+		p.isOpenReceive = false
 		return
 	}
 	return
@@ -65,19 +76,21 @@ func (p *Player) RequestActionAuto(actions core.ActionTypes, lastCard core.Card)
 }
 
 func (p *Player) ResponseAction(response *core.PlayerActionResponse) () {
-	// 发送消息给自己
+	log.Info("ResponseAction", "=>", p, response)
 }
 
 func (p *Player) NotifyFromOtherPlayerAction(notice *core.PlayerActionNotice) () {
 	// 发送消息给自己
+	log.Info("NotifyFromOtherPlayerAction", "=>", p, notice)
 }
 
 func (p *Player) SetValue(key string, value interface{}) {
-	panic("implement me")
+	p.data[key] = value
 }
 
 func (p *Player) GetValue(key string) (value interface{}, ok bool) {
-	panic("implement me")
+	value, ok = p.data[key]
+	return
 }
 
 func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player) (response *core.PlayerActionResponse) {
@@ -93,7 +106,8 @@ func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player
 	case core.AT_GangDian:
 		err = p.GangDian(playerDe, card)
 	case core.AT_Play:
-		err = p.Play()
+		err = p.Play(card)
+		response.Card = card
 	case core.AT_Peng:
 		err = p.Peng(playerDe, card)
 	case core.AT_HuDian:
@@ -105,20 +119,20 @@ func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player
 	case core.AT_LiangDao:
 		err = p.LiangDao(action.Cards, card)
 	case core.AT_Get:
-		e, card := p.GetCard()
-		err = e
+		err = p.GetCard(card)
 		response.Card = card
 	}
 	response.Err = err
+
 	return
 }
 
-func (p *Player) DoActionAuto(action *core.PlayerActionRequest, playerDe core.Player) (response *core.PlayerActionResponse) {
-	panic("implement me")
+func (p *Player) SetCards(cards core.Cards) {
+	p.cards = cards
 }
 
 func (p *Player) WriteAction(action *core.PlayerActionRequest) (err error) {
-	if !p.isOpenRecv {
+	if !p.isOpenReceive {
 		err = errors.New("not open receive")
 		return
 	}
@@ -133,12 +147,16 @@ func (p *Player) WriteAction(action *core.PlayerActionRequest) (err error) {
 }
 
 // 出牌
-func (p *Player) Play() (err error) {
+func (p *Player) Play(card core.Card) (err error) {
+	if !p.cards.Delete(card) {
+		err = errors.New("err card " + card.String())
+	}
 	return
 }
 
 // 摸牌
-func (p *Player) GetCard() (err error, card core.Card) {
+func (p *Player) GetCard(card core.Card) (err error) {
+	p.cards.Append(card)
 	return
 }
 
@@ -183,12 +201,13 @@ func (p *Player) HuQiangGang(player core.Player, card core.Card) (err error) {
 }
 
 func (p *Player) String() (s string) {
-	s = p.Name
+	s = fmt.Sprintf("Name: %s, Cards: %v", p.Name, p.cards)
 	return
 }
 
 func NewPlayer() *Player {
 	return &Player{
 		Reader: make(chan *core.PlayerActionRequest, 1),
+		data:   map[string]interface{}{},
 	}
 }

@@ -4,23 +4,25 @@ import (
 	"testing"
 	"github.com/bysir-zl/sync-chess/core"
 	"time"
+	"github.com/bysir-zl/sync-chess/chess"
 )
 
 // 验证 当有碰有胡时 胡优先
 func TestPlayPengHu(t *testing.T) {
-	p1 := core.NewPlayer()
-	p2 := core.NewPlayer()
-	p3 := core.NewPlayer()
+	p1 := chess.NewPlayer()
+	p2 := chess.NewPlayer()
+	p3 := chess.NewPlayer()
+
 	p1.Name = "p1"
 	p2.Name = "p2"
 	p3.Name = "p3"
+
 	m := core.Manager{
 		Players: core.Players{
 			p1, p2, p3,
 		},
 	}
 
-	p1.CanActions = core.ActionTypes{core.AT_Play}
 	go m.StartSupervise()
 
 	// 这里睡眠是为了让携程能读到新的CanActions, 并开启对p1消息的接收
@@ -124,24 +126,24 @@ func TestPlayQiangHang(t *testing.T) {
 	case 1:
 		// p1胡牌,p2过
 		// 期望是只有p1胡牌, 游戏结束
-		p2.WriteAction( &core.PlayerActionRequest{
+		p2.WriteAction(&core.PlayerActionRequest{
 			Types: core.AT_Hu,
 			Card:  100,
 		})
 
-		p3.WriteAction(  &core.PlayerActionRequest{
+		p3.WriteAction(&core.PlayerActionRequest{
 			Types: core.AT_Pass,
 			Card:  100,
 		})
 	case 2:
 		// p2胡牌,p1过
 		// 期望是只有p2胡牌, 游戏结束
-		p2.WriteAction(  &core.PlayerActionRequest{
+		p2.WriteAction(&core.PlayerActionRequest{
 			Types: core.AT_Pass,
 			Card:  100,
 		})
 
-		p3.WriteAction( &core.PlayerActionRequest{
+		p3.WriteAction(&core.PlayerActionRequest{
 			Types: core.AT_Hu,
 			Card:  100,
 		})
@@ -153,7 +155,7 @@ func TestPlayQiangHang(t *testing.T) {
 			Card:  100,
 		})
 
-		p3.WriteAction( &core.PlayerActionRequest{
+		p3.WriteAction(&core.PlayerActionRequest{
 			Types: core.AT_Hu,
 			Card:  100,
 		})

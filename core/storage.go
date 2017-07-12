@@ -18,12 +18,23 @@ func (p *Storage) SnapShoot() {
 }
 
 // 恢复快照,并且读取待运行的操作
-func (p *Storage) Recovery() {
+func (p *Storage) Recovery() (has bool) {
 	//players := p.manager.Players
 	//roundStartPlayer := p.manager.RoundStartPlayer
 	//surplusCards := p.manager.CardGenerator.GetCards()
 
 	log.Print("Storage Recoveryed " )
+	return
+}
+
+// 清空这局存档
+func (p *Storage) Clean() {
+	//players := p.manager.Players
+	//roundStartPlayer := p.manager.RoundStartPlayer
+	//surplusCards := p.manager.CardGenerator.GetCards()
+
+	log.Print("Storage Cleaned " )
+	return
 }
 
 // 保存玩家操作日志

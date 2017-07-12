@@ -15,11 +15,11 @@ var (
 )
 
 var (
-	TongMulti []Card
-	TiaoMulti []Card
-	WanMulti  []Card
-	FengMulti []Card
-	ZiMulti   []Card
+	TongMulti Cards
+	TiaoMulti Cards
+	WanMulti  Cards
+	FengMulti Cards
+	ZiMulti   Cards
 )
 
 func (p Card) String() string {
@@ -103,7 +103,7 @@ func init() {
 
 	//
 
-	TongMulti := make([]Card, len(C_Tong)*4)
+	TongMulti = make([]Card, len(C_Tong)*4)
 	for i, c := range C_Tong {
 		TongMulti[i-1] = c
 		TongMulti[i] = c
@@ -111,28 +111,28 @@ func init() {
 		TongMulti[i+2] = c
 	}
 
-	TiaoMulti := make([]Card, len(C_Tiao)*4)
+	TiaoMulti = make([]Card, len(C_Tiao)*4)
 	for i, c := range C_Tiao {
 		TiaoMulti[i-1] = c
 		TiaoMulti[i] = c
 		TiaoMulti[i+1] = c
 		TiaoMulti[i+2] = c
 	}
-	WanMulti := make([]Card, len(C_Wan)*4)
+	WanMulti = make([]Card, len(C_Wan)*4)
 	for i, c := range C_Wan {
 		WanMulti[i-1] = c
 		WanMulti[i] = c
 		WanMulti[i+1] = c
 		WanMulti[i+2] = c
 	}
-	FengMulti := make([]Card, len(C_Feng)*4)
+	FengMulti = make([]Card, len(C_Feng)*4)
 	for i, c := range C_Feng {
 		FengMulti[i-1] = c
 		FengMulti[i] = c
 		FengMulti[i+1] = c
 		FengMulti[i+2] = c
 	}
-	ZiMulti := make([]Card, len(C_Zi)*4)
+	ZiMulti = make([]Card, len(C_Zi)*4)
 	for i, c := range C_Zi {
 		ZiMulti[i-1] = c
 		ZiMulti[i] = c

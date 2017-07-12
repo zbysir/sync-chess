@@ -31,3 +31,22 @@ func (p *Players) After(currPlayer Player) (player Player) {
 
 	return
 }
+
+// 通知其他人消息
+func (p *Players) NotifyOtherPlayerAction(currPlayer Player, action *PlayerActionRequest) {
+	notice := &PlayerActionNotice{
+		Types: action.Types,
+		Card:  action.Card,
+		PlayerFrom:currPlayer,
+	}
+	if action.Types == AT_Get {
+		notice.Card = 0
+	}
+
+	otherPlayer := p.Exclude(currPlayer)
+	for _, player := range otherPlayer {
+		player.NotifyFromOtherPlayerAction(notice)
+	}
+
+	return
+}

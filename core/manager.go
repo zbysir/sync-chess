@@ -11,11 +11,13 @@ import (
 // 命令该谁出牌
 // 一个房间一个Manager
 type Manager struct {
-	Id               string        // 管理员唯一标示
-	Players          Players       // 所有玩家
-	RoundStartPlayer Player        // 每轮开始者
-	CardGenerator    CardGenerator // 发牌器
-	PlayerLeader     PlayerLeader  // 玩家领导
+	Id                   string  // 管理员唯一标示
+	Players              Players // 所有玩家
+	PlayerCreator        func() Player
+	LastPlayerNeedAction map[string]ActionTypes // 最后一次需要玩家的动作, 用于玩家重连重新发送请求
+	RoundStartPlayer     Player                 // 每轮开始者
+	CardGenerator        CardGenerator          // 发牌器
+	PlayerLeader         PlayerLeader           // 玩家领导
 	*Storage
 }
 

@@ -6,14 +6,28 @@ import (
 	"errors"
 	"github.com/bysir-zl/bygo/log"
 	"fmt"
+	"encoding/json"
 )
 
 type Player struct {
-	Name          string
-	Reader        chan *core.PlayerActionRequest
-	cards         core.Cards
-	isOpenReceive bool
-	data          map[string]interface{}
+	Id            string `json:"id"`
+	Reader        chan *core.PlayerActionRequest `json:"-"`
+	Cards         core.Cards `json:"Cards"`
+	IsOpenReceive bool `json:"-"`
+}
+
+func (p *Player) GetId() string {
+	return p.Id
+}
+
+func (p *Player) Marshal() (bs []byte, err error) {
+	bs, err = json.Marshal(p)
+	return
+}
+
+func (p *Player) Unmarshal(bs []byte) (err error) {
+	err = json.Unmarshal(bs, p)
+	return
 }
 
 func (p *Player) CanActions(isRounder bool, card core.Card) core.ActionTypes {
@@ -29,7 +43,7 @@ func (p *Player) CanActions(isRounder bool, card core.Card) core.ActionTypes {
 
 // 通知玩家动作
 func (p *Player) NotifyNeedAction(actions core.ActionTypes) {
-	p.isOpenReceive = true
+	p.IsOpenReceive = true
 	log.Info("NeedAction", "%+v %+v", p, actions)
 	return
 }
@@ -39,10 +53,10 @@ func (p *Player) WaitAction(ctx context.Context) (playerAction *core.PlayerActio
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
-		p.isOpenReceive = false
+		p.IsOpenReceive = false
 		return
 	case playerAction = <-p.Reader:
-		p.isOpenReceive = false
+		p.IsOpenReceive = false
 		return
 	}
 	return
@@ -59,7 +73,7 @@ func (p *Player) RequestActionAuto(actions core.ActionTypes, lastCard core.Card)
 			return
 		case core.AT_Play:
 			// 自动打最后一张
-			lastCard, _ := p.cards.Last()
+			lastCard, _ := p.Cards.Last()
 			playerAction = &core.PlayerActionRequest{
 				Types: a,
 				Card:  lastCard,
@@ -84,19 +98,9 @@ func (p *Player) NotifyFromOtherPlayerAction(notice *core.PlayerActionNotice) ()
 	log.Info("NotifyFromOtherPlayerAction", "=>", p, notice)
 }
 
-func (p *Player) SetValue(key string, value interface{}) {
-	p.data[key] = value
-}
-
-func (p *Player) GetValue(key string) (value interface{}, ok bool) {
-	value, ok = p.data[key]
-	return
-}
-
-func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player) (response *core.PlayerActionResponse) {
+func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player) (response *core.PlayerActionResponse, err error) {
 	card := action.Card
 	response = core.NewActionResponse()
-	var err error
 
 	switch action.Types {
 	case core.AT_GangAn:
@@ -122,17 +126,16 @@ func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player
 		err = p.GetCard(card)
 		response.Card = card
 	}
-	response.Err = err
 
 	return
 }
 
 func (p *Player) SetCards(cards core.Cards) {
-	p.cards = cards
+	p.Cards = cards
 }
 
 func (p *Player) WriteAction(action *core.PlayerActionRequest) (err error) {
-	if !p.isOpenReceive {
+	if !p.IsOpenReceive {
 		err = errors.New("not open receive")
 		return
 	}
@@ -148,7 +151,7 @@ func (p *Player) WriteAction(action *core.PlayerActionRequest) (err error) {
 
 // 出牌
 func (p *Player) Play(card core.Card) (err error) {
-	if !p.cards.Delete(card) {
+	if !p.Cards.Delete(card) {
 		err = errors.New("err card " + card.String())
 	}
 	return
@@ -156,7 +159,7 @@ func (p *Player) Play(card core.Card) (err error) {
 
 // 摸牌
 func (p *Player) GetCard(card core.Card) (err error) {
-	p.cards.Append(card)
+	p.Cards.Append(card)
 	return
 }
 
@@ -201,7 +204,7 @@ func (p *Player) HuQiangGang(player core.Player, card core.Card) (err error) {
 }
 
 func (p *Player) String() (s string) {
-	s = fmt.Sprintf("Name: %s, Cards: %v", p.Name, p.cards)
+	s = fmt.Sprintf("Id: %s, Cards: %v", p.Id, p.Cards)
 	return
 }
 

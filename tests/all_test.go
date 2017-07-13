@@ -14,9 +14,9 @@ func TestPlayPengHu(t *testing.T) {
 	p2 := chess.NewPlayer()
 	p3 := chess.NewPlayer()
 
-	p1.Name = "p1"
-	p2.Name = "p2"
-	p3.Name = "p3"
+	p1.Id = "p1"
+	p2.Id = "p2"
+	p3.Id = "p3"
 
 	cg := chess.NewCardGenerator()
 
@@ -75,9 +75,9 @@ func TestPlayPengHu(t *testing.T) {
 //	p1 := core.NewPlayer()
 //	p2 := core.NewPlayer()
 //	p3 := core.NewPlayer()
-//	p1.Name = "p1"
-//	p2.Name = "p2"
-//	p3.Name = "p3"
+//	p1.Id = "p1"
+//	p2.Id = "p2"
+//	p3.Id = "p3"
 //	m := core.Manager{
 //		Players: core.Players{
 //			p1, p2, p3,
@@ -101,9 +101,9 @@ func TestPlayPengHu(t *testing.T) {
 //	p1 := core.NewPlayer()
 //	p2 := core.NewPlayer()
 //	p3 := core.NewPlayer()
-//	p1.Name = "p1"
-//	p2.Name = "p2"
-//	p3.Name = "p3"
+//	p1.Id = "p1"
+//	p2.Id = "p2"
+//	p3.Id = "p3"
 //	m := core.Manager{
 //		Players: core.Players{
 //			p1, p2, p3,
@@ -185,9 +185,9 @@ func TestPlayPengHu(t *testing.T) {
 //	p1 := core.NewPlayer()
 //	p2 := core.NewPlayer()
 //	p3 := core.NewPlayer()
-//	p1.Name = "p1"
-//	p2.Name = "p2"
-//	p3.Name = "p3"
+//	p1.Id = "p1"
+//	p2.Id = "p2"
+//	p3.Id = "p3"
 //	m := core.Manager{
 //		Players: core.Players{
 //			p1, p2, p3,
@@ -262,9 +262,9 @@ func TestPlayPengHu(t *testing.T) {
 //	p1 := core.NewPlayer()
 //	p2 := core.NewPlayer()
 //	p3 := core.NewPlayer()
-//	p1.Name = "p1"
-//	p2.Name = "p2"
-//	p3.Name = "p3"
+//	p1.Id = "p1"
+//	p2.Id = "p2"
+//	p3.Id = "p3"
 //	m := core.Manager{
 //		Players: core.Players{
 //			p1, p2, p3,

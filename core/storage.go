@@ -10,7 +10,6 @@ import (
 // 用于保存牌局, 实现down机恢复, 重放等功能
 type Storage struct {
 	manager *Manager
-	//map[] // 存储用户操作
 }
 
 type SnapShoot struct {
@@ -53,7 +52,7 @@ func (p *Storage) Recovery() (has bool) {
 	// 拉取所有记录, 找到最近一次SnapShoot并恢复
 	// 将Step记录转换为manager.AutoAction, 当有AutoAction时manager不在询问player而是自动action
 
-	log.Info("Storage Recoveryed ")
+	log.Info("Storage Recoveryed")
 	return
 }
 
@@ -63,7 +62,7 @@ func (p *Storage) Clean() {
 	//roundStartPlayer := p.manager.RoundStartPlayer
 	//surplusCards := p.manager.CardGenerator.GetCards()
 
-	log.Info("Storage Cleaned ")
+	log.Info("Storage Cleaned")
 	return
 }
 

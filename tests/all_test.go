@@ -31,7 +31,7 @@ func TestPlayPengHu(t *testing.T) {
 
 	m.StartSupervise()
 
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	err := p1.WriteAction(&core.PlayerActionRequest{
 		Types: core.AT_Play,
 		Card:  core.C_Tong[3],
@@ -42,10 +42,24 @@ func TestPlayPengHu(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 	// 这时候玩家2先点击碰
-	//p2.WriteAction(&core.PlayerActionRequest{
-	//	Types: core.AT_Peng,
-	//	Card:  100,
-	//})
+	p2.WriteAction(&core.PlayerActionRequest{
+		Types: core.AT_Peng,
+		Card:  100,
+	})
+
+	time.Sleep(1 * time.Millisecond)
+	// 这时候玩家2先点击碰
+	p2.WriteAction(&core.PlayerActionRequest{
+		Types: core.AT_Play,
+		Card:  0,
+	})
+
+	time.Sleep(1 * time.Millisecond)
+	// 这时候玩家2先点击碰
+	p2.WriteAction(&core.PlayerActionRequest{
+		Types: core.AT_Play,
+		Card:  core.C_Tong[3],
+	})
 
 	time.Sleep(1 * time.Millisecond)
 	//way := 1

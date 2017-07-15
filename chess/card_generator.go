@@ -21,6 +21,10 @@ func (p *CardGenerator) GetCardsSurplus() (cards core.Cards) {
 	return p.cards
 }
 
+func (p *CardGenerator) SetCardsSurplus(cards core.Cards) {
+	p.cards = cards
+}
+
 func (p *CardGenerator) GetCards(length int) (cards core.Cards, ok bool) {
 	if len(p.cards) < length {
 		return

@@ -2,22 +2,14 @@ package chess
 
 import (
 	"github.com/bysir-zl/sync-chess/core"
-	"context"
 	"errors"
-	"github.com/bysir-zl/bygo/log"
-	"fmt"
 	"encoding/json"
+	"fmt"
 )
 
 type Player struct {
-	Id            string `json:"id"`
-	Reader        chan *core.PlayerActionRequest `json:"-"`
-	Cards         core.Cards `json:"Cards"`
-	IsOpenReceive bool `json:"-"`
-}
-
-func (p *Player) GetId() string {
-	return p.Id
+	Cards     core.Cards `json:"Cards"`
+	PengCards core.Cards
 }
 
 func (p *Player) Marshal() (bs []byte, err error) {
@@ -35,31 +27,10 @@ func (p *Player) CanActions(isRounder bool, card core.Card) core.ActionTypes {
 	if isRounder {
 		as = append(as, core.AT_Pass, core.AT_Play)
 	} else {
-		as = append(as, core.AT_Pass)
+		as = append(as, core.AT_Pass, core.AT_Peng)
 	}
 
 	return as
-}
-
-// 通知玩家动作
-func (p *Player) NotifyNeedAction(actions core.ActionTypes) {
-	p.IsOpenReceive = true
-	log.Info("NeedAction", "%+v %+v", p, actions)
-	return
-}
-
-// 获取玩家动作
-func (p *Player) WaitAction(ctx context.Context) (playerAction *core.PlayerActionRequest, err error) {
-	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-		p.IsOpenReceive = false
-		return
-	case playerAction = <-p.Reader:
-		p.IsOpenReceive = false
-		return
-	}
-	return
 }
 
 func (p *Player) RequestActionAuto(actions core.ActionTypes, lastCard core.Card) (playerAction *core.PlayerActionRequest) {
@@ -89,18 +60,8 @@ func (p *Player) RequestActionAuto(actions core.ActionTypes, lastCard core.Card)
 	return
 }
 
-func (p *Player) ResponseAction(response *core.PlayerActionResponse) () {
-	log.Info("ResponseAction", "=>", p, response)
-}
-
-func (p *Player) NotifyFromOtherPlayerAction(notice *core.PlayerActionNotice) () {
-	// 发送消息给自己
-	log.Info("NotifyFromOtherPlayerAction", "=>", p, notice)
-}
-
-func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player) (response *core.PlayerActionResponse, err error) {
+func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe *core.Player) (err error) {
 	card := action.Card
-	response = core.NewActionResponse()
 
 	switch action.Types {
 	case core.AT_GangAn:
@@ -111,7 +72,6 @@ func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player
 		err = p.GangDian(playerDe, card)
 	case core.AT_Play:
 		err = p.Play(card)
-		response.Card = card
 	case core.AT_Peng:
 		err = p.Peng(playerDe, card)
 	case core.AT_HuDian:
@@ -124,7 +84,6 @@ func (p *Player) DoAction(action *core.PlayerActionRequest, playerDe core.Player
 		err = p.LiangDao(action.Cards, card)
 	case core.AT_Get:
 		err = p.GetCard(card)
-		response.Card = card
 	}
 
 	return
@@ -134,22 +93,6 @@ func (p *Player) SetCards(cards core.Cards) {
 	p.Cards = cards
 }
 
-func (p *Player) WriteAction(action *core.PlayerActionRequest) (err error) {
-	if !p.IsOpenReceive {
-		err = errors.New("not open receive")
-		return
-	}
-
-	select {
-	case p.Reader <- action:
-	default:
-		err = errors.New("channel is full")
-		return
-	}
-	return
-}
-
-// 出牌
 func (p *Player) Play(card core.Card) (err error) {
 	if !p.Cards.Delete(card) {
 		err = errors.New("err card " + card.String())
@@ -164,7 +107,7 @@ func (p *Player) GetCard(card core.Card) (err error) {
 }
 
 // 只能碰别人p的牌card
-func (p *Player) Peng(player core.Player, card core.Card) (err error) {
+func (p *Player) Peng(player *core.Player, card core.Card) (err error) {
 	return
 }
 
@@ -174,7 +117,7 @@ func (p *Player) LiangDao(cards core.Cards, card core.Card) (err error) {
 }
 
 // 点杠
-func (p *Player) GangDian(player core.Player, card core.Card) (err error) {
+func (p *Player) GangDian(player *core.Player, card core.Card) (err error) {
 	return
 }
 
@@ -194,23 +137,20 @@ func (p *Player) HuZiMo(card core.Card) (err error) {
 }
 
 // 点炮
-func (p *Player) HuDian(player core.Player, card core.Card) (err error) {
+func (p *Player) HuDian(player *core.Player, card core.Card) (err error) {
 	return
 }
 
 // 抢杠胡
-func (p *Player) HuQiangGang(player core.Player, card core.Card) (err error) {
+func (p *Player) HuQiangGang(player *core.Player, card core.Card) (err error) {
 	return
 }
 
 func (p *Player) String() (s string) {
-	s = fmt.Sprintf("Id: %s, Cards: %v", p.Id, p.Cards)
+	s = fmt.Sprintf("Cards: %v", p.Cards)
 	return
 }
 
 func NewPlayer() *Player {
-	return &Player{
-		Reader: make(chan *core.PlayerActionRequest, 1),
-		data:   map[string]interface{}{},
-	}
+	return &Player{}
 }

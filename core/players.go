@@ -1,9 +1,9 @@
 package core
 
-type Players []Player
+type Players []*Player
 
 // 排除
-func (p *Players) Exclude(players ...Player) (ps Players) {
+func (p *Players) Exclude(players ...*Player) (ps Players) {
 	ps = Players{}
 	for _, player := range *p {
 		isExclude := false
@@ -20,7 +20,7 @@ func (p *Players) Exclude(players ...Player) (ps Players) {
 }
 
 // 得到下家
-func (p *Players) After(currPlayer Player) (player Player) {
+func (p *Players) After(currPlayer *Player) (player *Player) {
 	player = (*p)[0]
 	l := len(*p)
 	for i := 0; i < l-1; i++ {
@@ -32,21 +32,35 @@ func (p *Players) After(currPlayer Player) (player Player) {
 	return
 }
 
-// 通知其他人消息
-func (p *Players) NotifyOtherPlayerAction(currPlayer Player, action *PlayerActionRequest) {
-	notice := &PlayerActionNotice{
-		Types: action.Types,
-		Card:  action.Card,
-		PlayerFrom:currPlayer,
+func (p *Players) Add(player *Player) (isNew bool) {
+	if index := p.Index(player); index != -1 {
+		(*p)[index] = player
+	} else {
+		isNew = true
+		*p = append(*p, player)
 	}
-	if action.Types == AT_Get {
-		notice.Card = 0
-	}
+	return
+}
 
-	otherPlayer := p.Exclude(currPlayer)
-	for _, player := range otherPlayer {
-		player.NotifyFromOtherPlayerAction(notice)
+func (p *Players) Index(player *Player) (index int) {
+	index = -1
+	for i, playerI := range *p {
+		if playerI.Id == player.Id {
+			index = i
+			return
+		}
 	}
+	return
+}
 
+func (p *Players) Find(id string) (player *Player, index int) {
+	index = -1
+	for i, playerI := range *p {
+		if playerI.Id == id {
+			index = i
+			player = (*p)[i]
+			return
+		}
+	}
 	return
 }

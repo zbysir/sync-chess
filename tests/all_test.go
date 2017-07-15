@@ -6,33 +6,29 @@ import (
 	"time"
 	"github.com/bysir-zl/sync-chess/chess"
 	"github.com/bysir-zl/bygo/log"
+	"runtime"
 )
 
 // 验证 当有碰有胡时 胡优先
 func TestPlayPengHu(t *testing.T) {
-	p1 := chess.NewPlayer()
-	p2 := chess.NewPlayer()
-	p3 := chess.NewPlayer()
-
-	p1.Id = "p1"
-	p2.Id = "p2"
-	p3.Id = "p3"
 
 	cg := chess.NewCardGenerator()
+	pl := chess.NewPlayerLeader()
+	mh := chess.NewMessageHandler()
+	m := core.NewManager("1", cg, pl, mh)
+	p1 := "p1"
+	p2 := "p2"
+	p3 := "p3"
 
-	m := &core.Manager{
-		Players: core.Players{
-			p1, p2, p3,
-		},
-		CardGenerator: cg,
-		PlayerLeader:  chess.NewPlayerLeader(),
-	}
-	m.Storage = core.NewStorage(m)
+	m.AddPlayer(p1)
+	m.AddPlayer(p2)
+	m.AddPlayer(p3)
 
 	m.StartSupervise()
 
-	time.Sleep(100 * time.Millisecond)
-	err := p1.WriteAction(&core.PlayerActionRequest{
+	time.Sleep(1 * time.Second)
+
+	err := m.WritePlayerAction(p1, &core.PlayerActionRequest{
 		Types: core.AT_Play,
 		Card:  core.C_Tong[3],
 	})
@@ -40,28 +36,32 @@ func TestPlayPengHu(t *testing.T) {
 		log.Error("test", err)
 	}
 
-	time.Sleep(1 * time.Millisecond)
+	runtime.Gosched()
+	time.Sleep(1 * time.Second)
 	// 这时候玩家2先点击碰
-	p2.WriteAction(&core.PlayerActionRequest{
+	err = m.WritePlayerAction(p2, &core.PlayerActionRequest{
 		Types: core.AT_Peng,
 		Card:  100,
 	})
+	if err != nil {
+		log.Error("test", err)
+	}
 
-	time.Sleep(1 * time.Millisecond)
-	// 这时候玩家2先点击碰
-	p2.WriteAction(&core.PlayerActionRequest{
-		Types: core.AT_Play,
-		Card:  0,
-	})
-
-	time.Sleep(1 * time.Millisecond)
-	// 这时候玩家2先点击碰
-	p2.WriteAction(&core.PlayerActionRequest{
-		Types: core.AT_Play,
-		Card:  core.C_Tong[3],
-	})
-
-	time.Sleep(1 * time.Millisecond)
+	//time.Sleep(1 * time.Millisecond)
+	//// 这时候玩家2先点击碰
+	//p2.WriteAction(&core.PlayerActionRequest{
+	//	Types: core.AT_Play,
+	//	Card:  0,
+	//})
+	//
+	//time.Sleep(1 * time.Millisecond)
+	//// 这时候玩家2先点击碰
+	//p2.WriteAction(&core.PlayerActionRequest{
+	//	Types: core.AT_Play,
+	//	Card:  core.C_Tong[3],
+	//})
+	//
+	//time.Sleep(1 * time.Millisecond)
 	//way := 1
 	//switch way {
 	//case 1:

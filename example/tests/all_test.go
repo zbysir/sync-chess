@@ -2,11 +2,11 @@ package tests
 
 import (
 	"testing"
-	"github.com/bysir-zl/sync-chess/core"
 	"time"
-	"github.com/bysir-zl/sync-chess/example/chess"
+	"github.com/bysir-zl/sync-chess/example/chess_i"
 	"github.com/bysir-zl/bygo/log"
 	"runtime"
+	"github.com/bysir-zl/sync-chess/chess"
 )
 
 // 验证 当有碰有胡时 胡优先
@@ -24,7 +24,7 @@ func TestPlayPengHu(t *testing.T) {
 	m.AddPlayer(p2)
 	m.AddPlayer(p3)
 
-	m.StartSupervise()
+	m.Start()
 
 	time.Sleep(1 * time.Second)
 
@@ -80,7 +80,7 @@ func TestPlayPengHu(t *testing.T) {
 	//	})
 	//}
 
-	time.Sleep(1 * time.Hour)
+	m.Wait()
 }
 
 //

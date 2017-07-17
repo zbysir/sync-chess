@@ -20,7 +20,7 @@ func JoinRoom(roomId string, uid string) (err error) {
 		return
 	}
 	if len(m.Players) == 3 {
-		m.StartSupervise()
+		m.Start()
 	}
 	return
 }

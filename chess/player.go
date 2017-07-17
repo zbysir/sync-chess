@@ -8,6 +8,6 @@ type Player struct {
 }
 
 func (p *Player) String() (s string) {
-	s = fmt.Sprintf("playerId: %+v", *p)
+	s = fmt.Sprintf("player: %+v", *p)
 	return
 }

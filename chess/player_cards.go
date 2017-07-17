@@ -39,7 +39,7 @@ func (p ActionFrom) String() string {
 	case AF_Player:
 		s = "Player"
 	case AF_Storage:
-		s = "Storage"
+		s = "storage"
 	}
 	return s
 }

@@ -28,7 +28,7 @@ type Step struct {
 func (p *Storage) SnapShoot() {
 	players := p.manager.Players
 	roundStartPlayer := p.manager.RoundStartPlayer
-	surplusCards := p.manager.CardGenerator.GetCardsSurplus()
+	surplusCards := p.manager.cardGenerator.GetCardsSurplus()
 
 	s := SnapShoot{
 		Players:            players,
@@ -45,7 +45,7 @@ func (p *Storage) SnapShoot() {
 
 	Redis.RPUSH(p.manager.Id, bs)
 
-	log.Info("Storage SnapShoot ", s)
+	log.Info("storage SnapShoot ", s)
 }
 
 // 恢复快照,并且读取待运行的操作
@@ -64,16 +64,16 @@ func (p *Storage) Recovery() (has bool) {
 		switch bs[0] {
 		case 1:
 			snap := SnapShoot{}
-			err := snap.UnM(bs[1:], p.manager.PlayerLeader.PlayerCardsCreator)
+			err := snap.UnM(bs[1:], p.manager.playerLeader.PlayerCardsCreator)
 			if err != nil {
 				log.Error("snap.UnM Err:", err)
 				return
 			}
 			p.manager.Players = snap.Players
 			p.manager.RoundStartPlayer, _ = p.manager.Players.Find(snap.RoundStartPlayerId)
-			p.manager.CardGenerator.SetCardsSurplus(snap.SurplusCards)
+			p.manager.cardGenerator.SetCardsSurplus(snap.SurplusCards)
 
-			log.Info("Storage Recovery", snap)
+			log.Info("storage Recovery", snap)
 			has = true
 		case 2:
 			step := &Step{}
@@ -95,7 +95,7 @@ func (p *Storage) Recovery() (has bool) {
 			p.playerActionC[step.PlayerId] = make(chan *PlayerActionRequest, 100)
 		}
 		p.playerActionC[step.PlayerId] <- step.ActionRequest
-		log.Info("Storage Recovery Step", step)
+		log.Info("storage Recovery Step", step)
 	}
 
 	return
@@ -117,14 +117,14 @@ func (p *Storage) Step(player *Player, request *PlayerActionRequest) {
 
 	Redis.RPUSH(p.manager.Id, bs)
 
-	log.Info("Storage Step ", player, request)
+	log.Info("storage Step ", player, request)
 }
 
 // 清空这局存档
 func (p *Storage) Clean() {
 	Redis.DEL(p.manager.Id)
 
-	log.Info("Storage Cleaned")
+	log.Info("storage Cleaned")
 	return
 }
 
@@ -235,6 +235,7 @@ func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerCards) (err error)
 
 	return
 }
+
 func (s *Step) M() (bs []byte, err error) {
 	bs, err = json.Marshal(s)
 	return

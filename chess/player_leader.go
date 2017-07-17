@@ -17,7 +17,6 @@ func (p *PlayerLeader) PlayerCreator() (player core.PlayerInterface) {
 	return NewPlayer()
 }
 
-
 func NewPlayerLeader() *PlayerLeader {
 	return &PlayerLeader{
 	}

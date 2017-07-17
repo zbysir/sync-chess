@@ -8,8 +8,8 @@ const (
 	AT_Play                              // 出牌
 	AT_Peng                              // 碰
 	AT_GangDian                          // 直杠
-	AT_GangAn                            // 并且手上有三张了 就是暗杠;
-	AT_GangBu                            // 是自摸的牌 并且是碰过的就是补杠
+	AT_GangAn                            // 暗杠
+	AT_GangBu                            // 补杠
 	AT_HuDian                            // 点炮
 	AT_HuZiMo                            // 自摸
 	AT_HuQiangGang                       // 抢杠胡
@@ -53,11 +53,3 @@ func (p *ActionTypes) Contain(a ActionType) bool {
 	}
 	return false
 }
-
-type GangType int8
-
-const (
-	GT_Bu   GangType = iota + 1 // 补杠/扒杠
-	GT_An                       // 暗杠/自杠
-	GT_Dian                     // 点杠
-)

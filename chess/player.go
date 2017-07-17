@@ -8,8 +8,7 @@ import (
 )
 
 type Player struct {
-	Cards     core.Cards `json:"Cards"`
-	PengCards core.Cards
+	*PlayerCards `json:"player_cards"`
 }
 
 func (p *Player) Marshal() (bs []byte, err error) {

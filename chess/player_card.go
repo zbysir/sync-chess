@@ -12,5 +12,13 @@ type Gang struct {
 	Score    int32         // 分数, 杠需要记录扣分的人. 杠上杠的情况分数不一样
 	Receiver core.Player   // 接收者
 	Giver    []core.Player // 给予者
-	Types    core.GangType
+	Types    GangType
 }
+
+type GangType int8
+
+const (
+	GT_Bu   GangType = iota + 1 // 补杠/扒杠
+	GT_An                       // 暗杠/自杠
+	GT_Dian                     // 点杠
+)

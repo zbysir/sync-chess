@@ -12,12 +12,12 @@ import (
 // 一个房间一个Manager
 type Manager struct {
 	Id                   string                               // 管理员唯一标示
+	Storage              *Storage                             // 存档器
 	Players              Players                              // 所有玩家
 	LastPlayerNeedAction map[string]ActionTypes               // 最后一次需要玩家的动作, 用于玩家重连重新发送请求
 	RoundStartPlayer     *Player                              // 每轮开始者
 	CardGenerator        CardGenerator                        // 发牌器
 	PlayerLeader         PlayerLeader                         // 玩家领导
-	Storage              *Storage                             // 存档器
 	IsInitFromStorage    bool                                 // 是否是从存档恢复
 	isStartSupervise     bool                                 // 是否开始了游戏
 	MessageHandler       MessageHandler                       // 消息通知
@@ -58,6 +58,7 @@ func (p *Manager) StartSupervise() {
 		} else {
 			p.IsInitFromStorage = false
 		}
+
 		as := p.GetCanActions(p.RoundStartPlayer, true, 0)
 		p.NotifyNeedAction(p.RoundStartPlayer, as)
 		ctxTime, _ := context.WithTimeout(ctx, timeout)
@@ -68,10 +69,11 @@ func (p *Manager) StartSupervise() {
 			goto getRoundPlayerAction
 		}
 		log.Info("GetPlayerAction", "%+v %+v", p.RoundStartPlayer, a)
+
 		switch a.Types {
 		case AT_Play:
 			// 出牌
-			err := p.RoundStartPlayer.PlayerI.DoAction(a, p.RoundStartPlayer)
+			err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
 				p.NotifyNeedAction(p.RoundStartPlayer, as)
 				goto getRoundPlayerAction
@@ -119,7 +121,7 @@ func (p *Manager) StartSupervise() {
 					// 胡牌和杠碰是互斥的
 					// 胡过之后就不能杠碰
 					if !isHasHu {
-						err := player.PlayerI.DoAction(a, p.RoundStartPlayer)
+						err := player.PlayerCards.DoAction(a, p.RoundStartPlayer)
 						if err != nil {
 							p.NotifyNeedAction(player, wap.CanActions)
 							goto getOtherPlayerAction
@@ -136,7 +138,7 @@ func (p *Manager) StartSupervise() {
 					}
 				case AT_Peng:
 					if !isHasHu {
-						err = player.PlayerI.DoAction(a, p.RoundStartPlayer)
+						err = player.PlayerCards.DoAction(a, p.RoundStartPlayer)
 						if err != nil {
 							p.NotifyNeedAction(player, wap.CanActions)
 							goto getOtherPlayerAction
@@ -147,13 +149,12 @@ func (p *Manager) StartSupervise() {
 					}
 				case AT_HuDian:
 					isHasHu = true
-					err := player.PlayerI.DoAction(a, p.RoundStartPlayer)
+					err := player.PlayerCards.DoAction(a, p.RoundStartPlayer)
 					if err != nil {
 						p.NotifyNeedAction(player, wap.CanActions)
 						goto getOtherPlayerAction
 					}
 					p.DoActionAfter(player, a)
-
 				}
 			}
 			if isHasHu {
@@ -171,7 +172,7 @@ func (p *Manager) StartSupervise() {
 
 			goto startRound
 		case AT_GangAn:
-			err := p.RoundStartPlayer.PlayerI.DoAction(a, p.RoundStartPlayer)
+			err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
 				p.NotifyNeedAction(p.RoundStartPlayer, as)
 				goto getRoundPlayerAction
@@ -215,7 +216,7 @@ func (p *Manager) StartSupervise() {
 					p.DoActionAfter(player, a)
 					continue
 				case AT_HuQiangGang:
-					err := player.PlayerI.DoAction(a, p.RoundStartPlayer)
+					err := player.PlayerCards.DoAction(a, p.RoundStartPlayer)
 					if err != nil {
 						// 抢杠胡都有错误? 那就当pass了吧
 						continue
@@ -230,7 +231,7 @@ func (p *Manager) StartSupervise() {
 				goto end
 			} else {
 				// 补杠逻辑
-				err := p.RoundStartPlayer.PlayerI.DoAction(a, p.RoundStartPlayer)
+				err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
 				if err != nil {
 					p.NotifyNeedAction(p.RoundStartPlayer, as)
 					goto getRoundPlayerAction
@@ -247,7 +248,7 @@ func (p *Manager) StartSupervise() {
 				goto startRound
 			}
 		case AT_HuZiMo:
-			err := p.RoundStartPlayer.PlayerI.DoAction(a, p.RoundStartPlayer)
+			err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
 				p.NotifyNeedAction(p.RoundStartPlayer, as)
 				goto getRoundPlayerAction
@@ -296,7 +297,7 @@ func (p *Manager) GetCard(player *Player) (err error) {
 		Card:  card,
 		Types: AT_Get,
 	}
-	err = player.PlayerI.DoAction(action, player)
+	err = player.PlayerCards.DoAction(action, player)
 	if err != nil {
 		return
 	}
@@ -365,10 +366,10 @@ func (p *Manager) startGame() {
 	for _, player := range p.Players {
 		if player == p.RoundStartPlayer {
 			cards, _ := p.CardGenerator.GetCards(14)
-			player.PlayerI.SetCards(cards)
+			player.PlayerCards.SetCards(cards)
 		} else {
 			cards, _ := p.CardGenerator.GetCards(13)
-			player.PlayerI.SetCards(cards)
+			player.PlayerCards.SetCards(cards)
 		}
 	}
 }
@@ -398,7 +399,7 @@ func (p *Manager) GetCanActions(player *Player, isFirst bool, card Card) (action
 	if p.Storage.HasStep(player.Id) {
 		return
 	}
-	actions = player.PlayerI.CanActions(isFirst, card)
+	actions = player.PlayerCards.CanActions(isFirst, card)
 	return
 }
 
@@ -436,7 +437,7 @@ func (p *Manager) GetPlayerAction(ctx context.Context, player *Player, canAction
 
 // 获取玩家自动动作
 func (p *Manager) GetPlayerActionAuto(player *Player, canActions ActionTypes, card Card) (action *PlayerActionRequest) {
-	action = player.PlayerI.RequestActionAuto(canActions, card)
+	action = player.PlayerCards.RequestActionAuto(canActions, card)
 	action.ActionFrom = AF_Auto
 	return
 }
@@ -456,8 +457,8 @@ func (p *Manager) AddPlayer(playerId string) (err error) {
 	}
 
 	player := &Player{
-		Id:      playerId,
-		PlayerI: p.PlayerLeader.PlayerCreator(),
+		Id:          playerId,
+		PlayerCards: p.PlayerLeader.PlayerCardsCreator(),
 	}
 	if !p.Players.Add(player) {
 		err = errors.New("add player error")

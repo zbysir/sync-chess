@@ -43,7 +43,7 @@ func (p *Storage) SnapShoot() {
 	bs[0] = 1
 	copy(bs[1:], sBs)
 
-	Redis.RPUSH("STO", bs)
+	Redis.RPUSH(p.manager.Id, bs)
 
 	log.Info("Storage SnapShoot ", s)
 }
@@ -52,7 +52,7 @@ func (p *Storage) SnapShoot() {
 func (p *Storage) Recovery() (has bool) {
 	// 拉取所有记录, 找到最近一次SnapShoot并恢复
 	// 将Step记录转换为manager.AutoAction, 当有AutoAction时manager不在询问player而是自动action
-	ss, err := Redis.LRANGE("STO", 0, -1)
+	ss, err := Redis.LRANGE(p.manager.Id, 0, -1)
 	if err != nil {
 		log.Error("Recovery ERR: ", err)
 		return
@@ -64,7 +64,7 @@ func (p *Storage) Recovery() (has bool) {
 		switch bs[0] {
 		case 1:
 			snap := SnapShoot{}
-			err := snap.UnM(bs[1:], p.manager.PlayerLeader.PlayerCreator)
+			err := snap.UnM(bs[1:], p.manager.PlayerLeader.PlayerCardsCreator)
 			if err != nil {
 				log.Error("snap.UnM Err:", err)
 				return
@@ -115,14 +115,14 @@ func (p *Storage) Step(player *Player, request *PlayerActionRequest) {
 	bs[0] = 2
 	copy(bs[1:], sBs)
 
-	Redis.RPUSH("STO", bs)
+	Redis.RPUSH(p.manager.Id, bs)
 
 	log.Info("Storage Step ", player, request)
 }
 
 // 清空这局存档
 func (p *Storage) Clean() {
-	Redis.DEL("STO")
+	Redis.DEL(p.manager.Id)
 
 	log.Info("Storage Cleaned")
 	return
@@ -164,7 +164,7 @@ func (s *SnapShoot) M() (bs []byte, err error) {
 	var buff bytes.Buffer
 	playerBs := [][]byte{}
 	for _, player := range s.Players {
-		pbs, e := player.PlayerI.Marshal()
+		pbs, e := player.PlayerCards.Marshal()
 		if e != nil {
 			err = e
 			return
@@ -192,7 +192,7 @@ func (s *SnapShoot) M() (bs []byte, err error) {
 	return
 }
 
-func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerInterface) (err error) {
+func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerCards) (err error) {
 	bsp := bytes.Split(bs, sp)
 	if len(bsp) != 3 {
 		err = errors.New("bad format")
@@ -218,7 +218,7 @@ func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerInterface) (err er
 		}
 		id := string(idAI[1])
 		player := NewPlayer(id, PlayerCreator)
-		err = player.PlayerI.Unmarshal(idAI[0])
+		err = player.PlayerCards.Unmarshal(idAI[0])
 		if err != nil {
 			return
 		}

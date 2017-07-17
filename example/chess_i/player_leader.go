@@ -15,8 +15,8 @@ func (p *PlayerLeader) Next(currPlayer *chess.Player, players chess.Players) (pl
 	return players.After(currPlayer)
 }
 
-func (p *PlayerLeader) PlayerCreator() (player chess.PlayerInterface) {
-	return NewPlayer()
+func (p *PlayerLeader) PlayerCardsCreator() (player chess.PlayerCards) {
+	return NewPlayerCards()
 }
 
 func NewPlayerLeader() *PlayerLeader {

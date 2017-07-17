@@ -4,7 +4,7 @@ import (
 	"testing"
 	"github.com/bysir-zl/sync-chess/core"
 	"time"
-	"github.com/bysir-zl/sync-chess/chess"
+	"github.com/bysir-zl/sync-chess/example/chess"
 	"github.com/bysir-zl/bygo/log"
 	"runtime"
 )
@@ -12,10 +12,10 @@ import (
 // 验证 当有碰有胡时 胡优先
 func TestPlayPengHu(t *testing.T) {
 
-	cg := chess.NewCardGenerator()
-	pl := chess.NewPlayerLeader()
-	mh := chess.NewMessageHandler()
-	m := core.NewManager("1", cg, pl, mh)
+	cg := chess_i.NewCardGenerator()
+	pl := chess_i.NewPlayerLeader()
+	mh := chess_i.NewMessageHandler()
+	m := chess.NewManager("1", cg, pl, mh)
 	p1 := "p1"
 	p2 := "p2"
 	p3 := "p3"
@@ -28,9 +28,9 @@ func TestPlayPengHu(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	err := m.WritePlayerAction(p1, &core.PlayerActionRequest{
-		Types: core.AT_Play,
-		Card:  core.C_Tong[3],
+	err := m.WritePlayerAction(p1, &chess.PlayerActionRequest{
+		Types: chess.AT_Play,
+		Card:  chess.C_Tong[3],
 	})
 	if err != nil {
 		log.Error("test", err)
@@ -39,8 +39,8 @@ func TestPlayPengHu(t *testing.T) {
 	runtime.Gosched()
 	time.Sleep(1 * time.Second)
 	// 这时候玩家2先点击碰
-	err = m.WritePlayerAction(p2, &core.PlayerActionRequest{
-		Types: core.AT_Peng,
+	err = m.WritePlayerAction(p2, &chess.PlayerActionRequest{
+		Types: chess.AT_Peng,
 		Card:  100,
 	})
 	if err != nil {

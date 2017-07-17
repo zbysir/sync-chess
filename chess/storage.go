@@ -1,4 +1,4 @@
-package core
+package chess
 
 import (
 	"github.com/bysir-zl/bygo/log"

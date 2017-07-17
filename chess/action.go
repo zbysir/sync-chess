@@ -1,4 +1,4 @@
-package core
+package chess
 
 type ActionType uint16
 type ActionTypes []ActionType

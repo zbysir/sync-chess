@@ -1,4 +1,4 @@
-package core
+package chess
 
 type MessageHandler interface {
 	// 通知玩家需要进行操作

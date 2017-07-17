@@ -1,4 +1,4 @@
-package core
+package chess
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type Manager struct {
 	Id                   string                               // 管理员唯一标示
 	Players              Players                              // 所有玩家
 	LastPlayerNeedAction map[string]ActionTypes               // 最后一次需要玩家的动作, 用于玩家重连重新发送请求
-	RoundStartPlayer     *Player                               // 每轮开始者
+	RoundStartPlayer     *Player                              // 每轮开始者
 	CardGenerator        CardGenerator                        // 发牌器
 	PlayerLeader         PlayerLeader                         // 玩家领导
 	Storage              *Storage                             // 存档器
@@ -29,7 +29,7 @@ type WaitActionPlayer struct {
 	CanActions ActionTypes
 }
 
-var timeout = time.Second * 10
+var timeout = time.Second * 10000
 
 // 开始监督(游戏进行中)
 func (p *Manager) StartSupervise() {
@@ -414,6 +414,7 @@ func (p *Manager) GetPlayerAction(ctx context.Context, player *Player, canAction
 	select {
 	case action = <-p.PlayerActionRequestC[playerId]:
 		p.PlayerActionRequestC[playerId] <- nil
+		delete(p.LastPlayerNeedAction,playerId)
 
 		// 错误的动作, 重新获取
 		if !canActions.Contain(action.Types) {
@@ -424,6 +425,7 @@ func (p *Manager) GetPlayerAction(ctx context.Context, player *Player, canAction
 	case <-ctx.Done():
 		// 写入一个空 占满通道让他关闭接收消息
 		p.PlayerActionRequestC[playerId] <- nil
+		delete(p.LastPlayerNeedAction,playerId)
 
 		// 超时就自动打牌
 		action = p.GetPlayerActionAuto(player, canActions, card)
@@ -439,21 +441,48 @@ func (p *Manager) GetPlayerActionAuto(player *Player, canActions ActionTypes, ca
 	return
 }
 
-// 新加或者获取玩家
+// 添加玩家
 func (p *Manager) AddPlayer(playerId string) (err error) {
-	// 如果游戏已经开始, 则不能新加玩家
-	if p.isStartSupervise {
-		return
-	}
 	_, index := p.Players.Find(playerId)
 	if index != -1 {
+		err = ERR_JoinRoomPlayerExist
 		return
 	}
 
-	player := &Player{Id: playerId,
-		PlayerI:          p.PlayerLeader.PlayerCreator(),
+	// 如果游戏已经开始, 则不能新加玩家
+	if p.isStartSupervise {
+		err = errors.New("game is started")
+		return
 	}
-	p.Players.Add(player)
+
+	player := &Player{
+		Id:      playerId,
+		PlayerI: p.PlayerLeader.PlayerCreator(),
+	}
+	if !p.Players.Add(player) {
+		err = errors.New("add player error")
+		return
+	}
+	return
+}
+
+// 删除玩家
+func (p *Manager) RemovePlayer(playerId string) (err error) {
+	// 如果游戏已经开始, 则不能删除玩家
+	if p.isStartSupervise {
+		err = errors.New("game is started")
+		return
+	}
+	_, index := p.Players.Find(playerId)
+	if index == -1 {
+		err = errors.New("this player is not in room")
+		return
+	}
+
+	if !p.Players.RemoveById(playerId) {
+		err = errors.New("remove player error")
+		return
+	}
 	return
 }
 

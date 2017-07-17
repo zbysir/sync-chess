@@ -1,4 +1,4 @@
-package core
+package chess
 
 type Players []*Player
 
@@ -32,12 +32,23 @@ func (p *Players) After(currPlayer *Player) (player *Player) {
 	return
 }
 
-func (p *Players) Add(player *Player) (isNew bool) {
+func (p *Players) Add(player *Player) (ok bool) {
 	if index := p.Index(player); index != -1 {
-		(*p)[index] = player
-	} else {
-		isNew = true
-		*p = append(*p, player)
+		return
+	}
+
+	ok = true
+	*p = append(*p, player)
+	return
+}
+
+func (p *Players) RemoveById(playerId string) (ok bool) {
+	for i, player := range *p {
+		if player.Id == playerId {
+			ok = true
+			*p = append((*p)[0:i], (*p)[i+1:]...)
+			return
+		}
 	}
 	return
 }

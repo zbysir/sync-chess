@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chess</title>
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+</head>
+<body>
+<div id="app">
+    <div v-for="item in items" :key="item.key">
+        <div v-if="item.class==='tank'">
+            <div class="tank" :style="{top:item.pos.y+'px',left:item.pos.x+'px'}">{{item.id}}</div>
+        </div>
+    </div>
+</div>
+</body>
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            message: 'Hello Vue!',
+            items: [{'key': 1, 'class': 'tank', pos: {x: 100, y: 100}, id: '99'}],
+        },
+        methods: {}
+    })
+
+    var ws = new WebSocket("ws://localhost:10010/ws");
+    ws.onmessage = function (e) {
+        console.log(e.data)
+//        app.message = e.data
+//        var data = JSON.parse(e.data)
+//        if (data.Cmd === 0) {
+//            var items = []
+//            for (var k in data.Body) {
+//                var cla = k.substr(0, 4)
+//                var id = k.substr(4)
+//                var pos = data.Body[k]
+//                items.push({'class': cla, pos: pos, key: k, id: id})
+//            }
+//            app.items = items
+//        }
+    }
+
+    var uid = parseInt(window.location.hash.substr(1))
+    console.log(uid)
+
+    setTimeout(function () {
+        var s = JSON.stringify({Cmd: 0, uid: uid, room_id: 1})
+        console.log(ws.send(s))
+    }, 1000)
+
+
+</script>
+
+<style>
+    html, body, #app {
+        height: 100%;
+        width: 100%;
+    }
+
+    .card-back-left {
+        width: 30px;
+        height: 30px;
+        background-color: #5a84ff;
+    }
+
+    .card-back-right {
+        width: 30px;
+        height: 30px;
+        background-color: #5a84ff;
+    }
+
+    .card {
+        width: 30px;
+        height: 30px;
+        background-color: #ffffff;
+        border: 1px solid #004b8b;
+    }
+</style>
+</html>

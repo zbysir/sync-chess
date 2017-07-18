@@ -5,6 +5,7 @@ import (
 )
 
 type PlayerLeader struct {
+	Manager *chess.Manager
 }
 
 func (p *PlayerLeader) Banker(players chess.Players) (player chess.Player) {
@@ -15,8 +16,8 @@ func (p *PlayerLeader) Next(currPlayer chess.Player, players chess.Players) (pla
 	return players.After(currPlayer)
 }
 
-func (p *PlayerLeader) PlayerCardsCreator() (player chess.Player) {
-	return NewPlayer()
+func (p *PlayerLeader) PlayerCreator(id string) (player chess.Player) {
+	return NewPlayer(id,p.Manager)
 }
 
 func NewPlayerLeader() *PlayerLeader {

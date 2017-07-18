@@ -8,17 +8,23 @@ import (
 )
 
 type Player struct {
-	Id    string
-	Cards chess.Cards         // 手上的牌
-	Pong  chess.Cards         // 碰的牌
-	Gang  map[chess.Card]Gang // 杠的牌
+	Id          string
+	Cards       chess.Cards // 手上的牌
+	PlayedCards chess.Cards // 打出的牌
+	PengCards   chess.Cards // 碰的牌
+	GangCards   Gangs       // 杠的牌
+	Hu          Hu
+
+	manager *chess.Manager
 }
 
+type Gangs []*Gang
+
 type Gang struct {
-	Score    int32          // 分数, 杠需要记录扣分的人. 杠上杠的情况分数不一样
-	Receiver chess.Player   // 接收者
-	Giver    []chess.Player // 给予者
-	Types    GangType
+	Card  chess.Cards
+	Score int32          // 分数, 杠需要记录扣分的人. 杠上杠的情况分数不一样
+	Giver []chess.Player // 给予者
+	Types GangType
 }
 
 type GangType int8
@@ -28,6 +34,15 @@ const (
 	GT_An                       // 暗杠/自杠
 	GT_Dian                     // 点杠
 )
+
+// 牌型
+type Hu struct {
+	IsHued    bool           // 是否胡了
+	CardTypes []CardType     // 胡牌牌型
+	Giver     []chess.Player // 给予者
+}
+
+type CardType int32
 
 func (p *Player) GetId() (string) {
 	return p.Id
@@ -107,9 +122,10 @@ func (p *Player) DoAction(action *chess.PlayerActionRequest, playerDe chess.Play
 		err = p.GetCard(card)
 	}
 
-	if err != nil {
-		// todo 通知玩家动作
-		//NotifyActionResponse()
+	if err == nil {
+		// 通知玩家动作
+		NotifyActionResponse(p.Id, action)
+		NotifyFromOtherPlayerAction(p.Id, p.manager.Players.Ids(), action)
 	}
 
 	return
@@ -123,6 +139,7 @@ func (p *Player) Play(card chess.Card) (err error) {
 	if !p.Cards.Delete(card) {
 		err = errors.New("err card " + card.String())
 	}
+	p.PlayedCards.Append(card)
 	return
 }
 
@@ -177,6 +194,28 @@ func (p *Player) String() (s string) {
 	return
 }
 
-func NewPlayer() *Player {
-	return &Player{}
+// 能告知自己的信息
+func (p *Player) InfoSelf() interface{} {
+	return map[string]interface{}{
+		"Id":          p.Id,
+		"Cards":       p.Cards,
+		"PlayedCards": p.PlayedCards,
+		"Peng":        p.PengCards,
+		"Gang":        p.GangCards,
+	}
+}
+
+// 能告知别人的信息
+func (p *Player) InfoOther() interface{} {
+	return map[string]interface{}{
+		"Id":          p.Id,
+		"CardsLen":    len(p.Cards),
+		"PlayedCards": p.PlayedCards,
+		"Peng":        p.PengCards,
+		"Gang":        p.GangCards,
+	}
+}
+
+func NewPlayer(id string, manager *chess.Manager) *Player {
+	return &Player{Id: id, manager: manager}
 }

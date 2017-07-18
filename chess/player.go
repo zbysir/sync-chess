@@ -48,23 +48,8 @@ func (p ActionFrom) String() string {
 
 // 玩家动作请求
 type PlayerActionRequest struct {
-	Types      ActionType
-	Cards      Cards // 动作哪几张牌, 比如亮倒隐藏刻子时有用
-	Card       Card  // 动作哪张牌
+	Types      ActionType `json:"Types"`
+	Cards      Cards `json:"Cards"` // 动作哪几张牌, 比如亮倒隐藏刻子时有用
+	Card       Card  `json:"Card"`  // 动作哪张牌
 	ActionFrom ActionFrom
-}
-
-// 玩家动作相应
-type PlayerActionResponse struct {
-	Types      ActionType
-	Cards      Cards // 动作哪几张牌, 比如换三张
-	Card       Card  // 动作哪张牌
-	ActionFrom ActionFrom
-}
-
-// 通知玩家来自其他玩家动作
-type PlayerActionNotice struct {
-	PlayerFrom *Player
-	Types      ActionType
-	Card       Card // 动作哪张牌,有部分情况会为空 如摸牌
 }

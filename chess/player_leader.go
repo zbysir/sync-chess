@@ -7,5 +7,5 @@ type PlayerLeader interface {
 	// 获取下家
 	Next(currPlayer Player, players Players) (player Player)
 	// 生成器
-	PlayerCardsCreator() Player
+	PlayerCreator(id string) Player
 }

@@ -28,7 +28,7 @@ type Step struct {
 func (p *Storage) SnapShoot() {
 	players := p.manager.Players
 	roundStartPlayer := p.manager.RoundStartPlayer
-	surplusCards := p.manager.cardGenerator.GetCardsSurplus()
+	surplusCards := p.manager.CardGenerator.GetCardsSurplus()
 
 	s := SnapShoot{
 		Players:            players,
@@ -64,14 +64,14 @@ func (p *Storage) Recovery() (has bool) {
 		switch bs[0] {
 		case 1:
 			snap := SnapShoot{}
-			err := snap.Unmarshal(bs[1:], p.manager.playerLeader.PlayerCardsCreator)
+			err := snap.Unmarshal(bs[1:], p.manager.playerLeader.PlayerCreator)
 			if err != nil {
 				log.Error("snap.Unmarshal Err:", err)
 				return
 			}
 			p.manager.Players = snap.Players
 			p.manager.RoundStartPlayer, _ = p.manager.Players.Find(snap.RoundStartPlayerId)
-			p.manager.cardGenerator.SetCardsSurplus(snap.SurplusCards)
+			p.manager.CardGenerator.SetCardsSurplus(snap.SurplusCards)
 
 			log.Info("storage Recovery", snap)
 			has = true
@@ -188,7 +188,7 @@ func (s *SnapShoot) Marshal() (bs []byte, err error) {
 	return
 }
 
-func (s *SnapShoot) Unmarshal(bs []byte, PlayerCreator func() Player) (err error) {
+func (s *SnapShoot) Unmarshal(bs []byte, PlayerCreator func(string) Player) (err error) {
 	bsp := bytes.Split(bs, sp)
 	if len(bsp) != 3 {
 		err = errors.New("bad format")
@@ -207,7 +207,7 @@ func (s *SnapShoot) Unmarshal(bs []byte, PlayerCreator func() Player) (err error
 	lenPlayer := len(playerBs)
 	players := make(Players, lenPlayer)
 	for i, pbs := range playerBs {
-		player := PlayerCreator()
+		player := PlayerCreator("")
 		err = player.Unmarshal(pbs)
 		if err != nil {
 			return

@@ -8,8 +8,9 @@ import (
 	"time"
 	"github.com/bysir-zl/bjson"
 	"github.com/bysir-zl/hubs/core/net/conn_wrap"
-	"github.com/bysir-zl/sync-chess/example/server/room"
+	"github.com/bysir-zl/sync-chess/example/server/rooms"
 	"github.com/bysir-zl/sync-chess/chess"
+	"github.com/bysir-zl/sync-chess/example/chess_i"
 )
 
 func main() {
@@ -47,30 +48,39 @@ func handler(con conn_wrap.Interface) {
 			continue
 		}
 		cmd := bj.Pos("Cmd").Int()
-		switch cmd {
 
-		case 0:
+		if cmd != 0 && uid == "" {
+			break
+		}
+
+		switch cmd {
+		case chess_i.CMD_JoinRoom:
 			// 登录
-			uid = bj.Pos("uid").String()
-			room_id = bj.Pos("room_id").String()
+			uid = bj.Pos("Uid").String()
+			room_id = bj.Pos("RoomId").String()
 			con.Subscribe("uid" + uid)
 
-			err := room.JoinRoom(room_id, uid)
+			err := rooms.JoinRoom(room_id, uid)
 			if err != nil {
 				// 重连
 				if err == chess.ERR_JoinRoomPlayerExist {
-					// todo 发送整个房间
-					room.SendLastActions(room_id, uid)
+					rooms.SendRoom(room_id, uid)
+					rooms.SendLastActions(room_id, uid)
+				} else {
+					log.Info("joinRoom Err", err)
+					break
 				}
-				log.Info("joinRoom Err", err)
-				break
 			}
 
 			log.Info("login", uid)
 			log.Info("joinRoom", room_id)
-		case 1:
-			// 加入房间
 
+		case chess_i.CMD_Action:
+			// 打牌动作
+			action := chess.PlayerActionRequest{}
+			err := bj.Pos("Action").Object(&action)
+			log.Info("action", action, err)
+			rooms.WriteAction(room_id, uid, &action)
 		}
 		if cmd == 0 {
 			con.SetValue("uid", bj.Pos("Body").Int())
@@ -84,7 +94,7 @@ func handler(con conn_wrap.Interface) {
 	log.Info("close", uid)
 
 	if uid != "" {
-		err := room.Leave(room_id, uid)
+		err := rooms.Leave(room_id, uid)
 		log.Info("room Leave", err)
 	}
 }

@@ -19,6 +19,15 @@ func (p *Players) Exclude(players ...Player) (ps Players) {
 	return
 }
 
+func (p *Players) Ids() (ids []string) {
+	ids = make([]string, len(*p))
+	for i, player := range *p {
+		ids[i] = player.GetId()
+	}
+
+	return
+}
+
 // 得到下家
 func (p *Players) After(currPlayer Player) (player Player) {
 	player = (*p)[0]

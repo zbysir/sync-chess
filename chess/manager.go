@@ -11,18 +11,20 @@ import (
 // 命令该谁出牌
 // 一个房间一个Manager
 type Manager struct {
-	Id                   string                               // 管理员唯一标示
-	storage              *Storage                             // 存档器
-	cardGenerator        CardGenerator                        // 发牌器
-	playerLeader         PlayerLeader                         // 玩家领导
-	isInitFromStorage    bool                                 // 是否是从存档恢复
-	isStarted            bool                                 // 是否开始了游戏
+	Id                string       // 管理员唯一标示
+	storage           *Storage     // 存档器
+	playerLeader      PlayerLeader // 玩家领导
+	isInitFromStorage bool         // 是否是从存档恢复
+	isStarted         bool         // 是否开始了游戏
+	isInit            bool         // 是否以及初始化过了, 每个对象创建出来 只需要初始化一次
+
 	playerActionRequestC map[string]chan *PlayerActionRequest // 玩家动作请求队列
 	isNeedStopGame       bool                                 // 是否在这小回合结束后结束游戏
 	ctxCancel            func()                               // ctx关闭func
 	ctx                  context.Context                      //
 
-	RoundStartPlayer     Player                // 每轮开始者
+	CardGenerator        CardGenerator          // 发牌器
+	RoundStartPlayer     Player                 // 每轮开始者
 	Players              Players                // 所有玩家
 	LastPlayerNeedAction map[string]ActionTypes // 最后一次需要玩家的动作, 用于玩家重连重新发送请求
 	MessageHandler       MessageHandler         // 消息通知
@@ -37,6 +39,9 @@ var timeout = time.Second * 10000
 
 // 开始监督(游戏进行中)
 func (p *Manager) Start() {
+	if !p.isInit {
+		panic("not init, please call Manager.Init()")
+	}
 	if p.isStarted {
 		return
 	}
@@ -295,7 +300,7 @@ func (p *Manager) clear() (err error) {
 	p.isStarted = false
 	p.isInitFromStorage = false
 	p.Players = Players{}
-	p.cardGenerator.Reset()
+	p.CardGenerator.Reset()
 	p.playerActionRequestC = map[string]chan *PlayerActionRequest{}
 	p.isNeedStopGame = false
 	p.RoundStartPlayer = nil
@@ -307,28 +312,16 @@ func (p *Manager) Wait() {
 	<-p.ctx.Done()
 }
 
-// 玩家成功动作后记录,并响应玩家
+// 玩家成功动作后记录
 func (p *Manager) doActionAfter(player Player, action *PlayerActionRequest, ) {
-	//if action.ActionFrom != AF_Storage {
-	//	p.storage.Step(player, action)
-	//	rsp := &PlayerActionResponse{
-	//		ActionFrom: action.ActionFrom,
-	//		Card:       action.Card,
-	//		Types:      action.Types,
-	//	}
-	//	notice := &PlayerActionNotice{
-	//		Types:      action.Types,
-	//		Card:       action.Card,
-	//		PlayerFrom: player,
-	//	}
-	//	p.MessageHandler.NotifyActionResponse(player.Id, rsp)
-	//	p.notifyOtherPlayerAction(player, notice)
-	//}
+	if action.ActionFrom != AF_Storage {
+		p.storage.Step(player, action)
+	}
 }
 
 // 摸牌
 func (p *Manager) getCard(player Player) (err error) {
-	cards, ok := p.cardGenerator.GetCards(1)
+	cards, ok := p.CardGenerator.GetCards(1)
 	if !ok {
 		err = errors.New("not cards")
 		return
@@ -357,38 +350,19 @@ func (p *Manager) getCard(player Player) (err error) {
 	return
 }
 
-// 通知其他人消息
-func (p *Manager) notifyOtherPlayerAction(currPlayer Player, notice *PlayerActionNotice) {
-	// pass 消息不需要告知其他人
-	//if notice.Types == AT_Pass {
-	//	return
-	//}
-	//
-	//if notice.Types == AT_Get {
-	//	notice.Card = 0
-	//}
-	//
-	//otherPlayer := p.Players.Exclude(currPlayer)
-	//for _, player := range otherPlayer {
-	//	p.MessageHandler.NotifyFromOtherPlayerAction(player.Id, notice)
-	//}
-
-	return
-}
-
 func (p *Manager) startGame() {
 	// 选庄家
 	p.RoundStartPlayer = p.Players[0]
-	p.cardGenerator.Reset()
-	p.cardGenerator.Shuffle()
+	p.CardGenerator.Reset()
+	p.CardGenerator.Shuffle()
 
 	// 发牌
 	for _, player := range p.Players {
 		if player == p.RoundStartPlayer {
-			cards, _ := p.cardGenerator.GetCards(14)
+			cards, _ := p.CardGenerator.GetCards(14)
 			player.SetCards(cards)
 		} else {
-			cards, _ := p.cardGenerator.GetCards(13)
+			cards, _ := p.CardGenerator.GetCards(13)
 			player.SetCards(cards)
 		}
 	}
@@ -497,7 +471,7 @@ func (p *Manager) AddPlayer(playerId string) (err error) {
 		return
 	}
 
-	player := p.playerLeader.PlayerCardsCreator()
+	player := p.playerLeader.PlayerCreator(playerId)
 	if !p.Players.Add(player) {
 		err = errors.New("add player error")
 		return
@@ -525,21 +499,26 @@ func (p *Manager) RemovePlayer(playerId string) (err error) {
 	return
 }
 
+// 初始化, 尝试从存档恢复现场
+func (p *Manager) Init() {
+	p.isInit = true
+	// 尝试读档
+	p.isInitFromStorage = p.storage.Recovery()
+	if p.isInitFromStorage {
+		p.Start()
+	}
+}
+
 func NewManager(id string, cardGenerator CardGenerator, playerLeader PlayerLeader, messageHandler MessageHandler) *Manager {
 	m := &Manager{
 		Id:                   id,
 		Players:              Players{},
-		cardGenerator:        cardGenerator,
+		CardGenerator:        cardGenerator,
 		playerLeader:         playerLeader,
 		MessageHandler:       messageHandler,
 		LastPlayerNeedAction: map[string]ActionTypes{},
 		playerActionRequestC: map[string]chan *PlayerActionRequest{},
 	}
 	m.storage = NewStorage(m)
-	// 尝试读档
-	m.isInitFromStorage = m.storage.Recovery()
-	if m.isInitFromStorage {
-		m.Start()
-	}
 	return m
 }

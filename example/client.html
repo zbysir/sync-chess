@@ -7,10 +7,18 @@
 </head>
 <body>
 <div id="app">
-    <div v-for="item in items" :key="item.key">
-        <div v-if="item.class==='tank'">
-            <div class="tank" :style="{top:item.pos.y+'px',left:item.pos.x+'px'}">{{item.id}}</div>
+    <div class="desk">
+        <div class="player" v-for="player in players">
+            <div class="hand-cards">
+                <div class="card" v-for="card in player.Cards" @click="playCard(card)">{{card}}</div>
+            </div>
+            <div class="played-cards">
+                <div class="card" v-for="card in player.PlayedCards" >{{card}}</div>
+            </div>
         </div>
+
+        <div class="notify-action" v-if="canAction">请动作</div>
+        <div class="notify-play" v-if="canPlay">请出牌</div>
     </div>
 </div>
 </body>
@@ -19,15 +27,72 @@
     var app = new Vue({
         el: '#app',
         data: {
-            message: 'Hello Vue!',
-            items: [{'key': 1, 'class': 'tank', pos: {x: 100, y: 100}, id: '99'}],
+            players: [],
+            canAction: false,// 能否动作
+            canPlay: false,// 能否出牌
         },
-        methods: {}
+        methods: {
+            playCard: function (card) {
+                if (!card) {
+                    return
+                }
+                if (!app.canPlay) {
+                    console.log("can not play")
+                    return
+                }
+                var Action = {
+                    Types: 2,
+                    Card: card,
+                }
+                var s = JSON.stringify({Cmd: 100, Action: Action})
+                console.log(ws.send(s))
+
+            }
+        }
     })
 
-    var ws = new WebSocket("ws://localhost:10010/ws");
+    var uid = parseInt(window.location.hash.substr(1))
+    console.log(uid)
+
+    var ws = new WebSocket("ws://localhost:10010/");
     ws.onmessage = function (e) {
-        console.log(e.data)
+        var data = JSON.parse(e.data)
+        console.log(data)
+        switch (data.Cmd) {
+            case 1003:
+                // 重构players数组
+                // 让第一个始终是自己
+                var offset = 0
+                var players = []
+                for (var i in data.Players) {
+                    if (data.Players[i].Id == uid) {
+                        offset = i
+                    }
+                    players.push(0)
+                }
+
+                var len = players.length
+                for (var i in data.Players) {
+                    var ti = (i - offset + len) % len
+                    players[ti] = data.Players[i]
+                    if (ti !== 0) {
+                        players[ti].Cards = []
+                        for (var i = 0; i < players[ti].CardsLen; i++) {
+                            players[ti].Cards.push(0)
+                        }
+                    }
+                }
+                console.log("players", players)
+                app.players = players
+            case 1004:
+                break
+            case 1000:
+                app.canAction = true
+                if (data.Actions.indexOf(2) !== -1) {
+                    app.canPlay = true
+                }
+
+        }
 //        app.message = e.data
 //        var data = JSON.parse(e.data)
 //        if (data.Cmd === 0) {
@@ -42,11 +107,9 @@
 //        }
     }
 
-    var uid = parseInt(window.location.hash.substr(1))
-    console.log(uid)
 
     setTimeout(function () {
-        var s = JSON.stringify({Cmd: 0, uid: uid, room_id: 1})
+        var s = JSON.stringify({Cmd: 0, Uid: uid, RoomId: 1})
         console.log(ws.send(s))
     }, 1000)
 
@@ -57,7 +120,66 @@
     html, body, #app {
         height: 100%;
         width: 100%;
+        padding: 0;
+        margin: 0;
     }
+
+    .desk {
+        width: 600px;
+        height: 600px;
+        position: relative;
+    }
+
+    .desk .notify-action {
+        top: 50%;
+        left: 50%;
+        position: absolute;
+    }
+
+    .desk .notify-play {
+        bottom: 100px;
+        left: 50%;
+        position: absolute;
+    }
+
+    .player {
+        position: absolute;
+    }
+
+    .hand-cards,.played-cards{
+        padding: 8px;
+    }
+
+    /*--*/
+
+    .player:nth-child(1) {
+        bottom: 0;
+        background-color: #5a84ff;
+    }
+
+    .player:nth-child(1) .card {
+        display: inline-block;
+    }
+
+    .player:nth-child(1) .played-cards {
+        float: left;
+    }
+
+    /*--*/
+
+    .player:nth-child(2) {
+        right: 0;
+        background-color: #5a84ff;
+    }
+
+    /*--*/
+
+    .player:nth-child(3) {
+        left: 0;
+        background-color: #5a84ff;
+    }
+
+    /*--*/
 
     .card-back-left {
         width: 30px;
@@ -76,6 +198,7 @@
         height: 30px;
         background-color: #ffffff;
         border: 1px solid #004b8b;
+        cursor: pointer;
     }
 </style>
 </html>

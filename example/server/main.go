@@ -59,6 +59,7 @@ func handler(con conn_wrap.Interface) {
 			if err != nil {
 				// 重连
 				if err == chess.ERR_JoinRoomPlayerExist {
+					// todo 发送整个房间
 					room.SendLastActions(room_id, uid)
 				}
 				log.Info("joinRoom Err", err)

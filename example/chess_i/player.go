@@ -7,7 +7,8 @@ import (
 	"fmt"
 )
 
-type PlayerCards struct {
+type Player struct {
+	Id    string
 	Cards chess.Cards         // 手上的牌
 	Pong  chess.Cards         // 碰的牌
 	Gang  map[chess.Card]Gang // 杠的牌
@@ -28,18 +29,21 @@ const (
 	GT_Dian                     // 点杠
 )
 
+func (p *Player) GetId() (string) {
+	return p.Id
+}
 
-func (p *PlayerCards) Marshal() (bs []byte, err error) {
+func (p *Player) Marshal() (bs []byte, err error) {
 	bs, err = json.Marshal(p)
 	return
 }
 
-func (p *PlayerCards) Unmarshal(bs []byte) (err error) {
+func (p *Player) Unmarshal(bs []byte) (err error) {
 	err = json.Unmarshal(bs, p)
 	return
 }
 
-func (p *PlayerCards) CanActions(isRounder bool, card chess.Card) chess.ActionTypes {
+func (p *Player) CanActions(isRounder bool, card chess.Card) chess.ActionTypes {
 	as := chess.ActionTypes{}
 	if isRounder {
 		as = append(as, chess.AT_Play)
@@ -50,7 +54,7 @@ func (p *PlayerCards) CanActions(isRounder bool, card chess.Card) chess.ActionTy
 	return as
 }
 
-func (p *PlayerCards) RequestActionAuto(actions chess.ActionTypes, lastCard chess.Card) (playerAction *chess.PlayerActionRequest) {
+func (p *Player) RequestActionAuto(actions chess.ActionTypes, lastCard chess.Card) (playerAction *chess.PlayerActionRequest) {
 	for _, a := range actions {
 		switch a {
 		case chess.AT_HuZiMo, chess.AT_HuDian, chess.AT_HuQiangGang:
@@ -77,7 +81,7 @@ func (p *PlayerCards) RequestActionAuto(actions chess.ActionTypes, lastCard ches
 	return
 }
 
-func (p *PlayerCards) DoAction(action *chess.PlayerActionRequest, playerDe *chess.Player) (err error) {
+func (p *Player) DoAction(action *chess.PlayerActionRequest, playerDe chess.Player) (err error) {
 	card := action.Card
 
 	switch action.Types {
@@ -103,14 +107,19 @@ func (p *PlayerCards) DoAction(action *chess.PlayerActionRequest, playerDe *ches
 		err = p.GetCard(card)
 	}
 
+	if err != nil {
+		// todo 通知玩家动作
+		//NotifyActionResponse()
+	}
+
 	return
 }
 
-func (p *PlayerCards) SetCards(cards chess.Cards) {
+func (p *Player) SetCards(cards chess.Cards) {
 	p.Cards = cards
 }
 
-func (p *PlayerCards) Play(card chess.Card) (err error) {
+func (p *Player) Play(card chess.Card) (err error) {
 	if !p.Cards.Delete(card) {
 		err = errors.New("err card " + card.String())
 	}
@@ -118,56 +127,56 @@ func (p *PlayerCards) Play(card chess.Card) (err error) {
 }
 
 // 摸牌
-func (p *PlayerCards) GetCard(card chess.Card) (err error) {
+func (p *Player) GetCard(card chess.Card) (err error) {
 	p.Cards.Append(card)
 	return
 }
 
 // 只能碰别人p的牌card
-func (p *PlayerCards) Peng(player *chess.Player, card chess.Card) (err error) {
+func (p *Player) Peng(player chess.Player, card chess.Card) (err error) {
 	return
 }
 
 // 亮倒并出牌
-func (p *PlayerCards) LiangDao(cards chess.Cards, card chess.Card) (err error) {
+func (p *Player) LiangDao(cards chess.Cards, card chess.Card) (err error) {
 	return
 }
 
 // 点杠
-func (p *PlayerCards) GangDian(player *chess.Player, card chess.Card) (err error) {
+func (p *Player) GangDian(player chess.Player, card chess.Card) (err error) {
 	return
 }
 
 // 补杠
-func (p *PlayerCards) GangBu(card chess.Card) (err error) {
+func (p *Player) GangBu(card chess.Card) (err error) {
 	return
 }
 
 // 自杠
-func (p *PlayerCards) GangAn(card chess.Card) (err error) {
+func (p *Player) GangAn(card chess.Card) (err error) {
 	return
 }
 
 // 自摸
-func (p *PlayerCards) HuZiMo(card chess.Card) (err error) {
+func (p *Player) HuZiMo(card chess.Card) (err error) {
 	return
 }
 
 // 点炮
-func (p *PlayerCards) HuDian(player *chess.Player, card chess.Card) (err error) {
+func (p *Player) HuDian(player chess.Player, card chess.Card) (err error) {
 	return
 }
 
 // 抢杠胡
-func (p *PlayerCards) HuQiangGang(player *chess.Player, card chess.Card) (err error) {
+func (p *Player) HuQiangGang(player chess.Player, card chess.Card) (err error) {
 	return
 }
 
-func (p *PlayerCards) String() (s string) {
+func (p *Player) String() (s string) {
 	s = fmt.Sprintf("Cards: %v", p.Cards)
 	return
 }
 
-func NewPlayerCards() *PlayerCards {
-	return &PlayerCards{}
+func NewPlayer() *Player {
+	return &Player{}
 }

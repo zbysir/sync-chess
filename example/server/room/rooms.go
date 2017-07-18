@@ -36,16 +36,6 @@ func Leave(roomId, uid string) (err error) {
 	return
 }
 
-func GetMessageHandler(roomId string) (mh chess.MessageHandler, err error) {
-	m, ok := Managers[roomId]
-	if !ok {
-		err = errors.New("404")
-		return
-	}
-	mh = m.MessageHandler
-	return
-}
-
 func SendLastActions(roomId string, uid string) (err error) {
 	m, ok := Managers[roomId]
 	if !ok {
@@ -60,6 +50,7 @@ func SendLastActions(roomId string, uid string) (err error) {
 	m.MessageHandler.NotifyNeedAction(uid, as)
 	return
 }
+
 
 func init() {
 	cg := chess_i.NewCardGenerator()

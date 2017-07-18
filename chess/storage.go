@@ -32,10 +32,10 @@ func (p *Storage) SnapShoot() {
 
 	s := SnapShoot{
 		Players:            players,
-		RoundStartPlayerId: roundStartPlayer.Id,
+		RoundStartPlayerId: roundStartPlayer.GetId(),
 		SurplusCards:       surplusCards,
 	}
-	sBs, err := s.M()
+	sBs, err := s.Marshal()
 	if err != nil {
 		panic(err)
 	}
@@ -64,9 +64,9 @@ func (p *Storage) Recovery() (has bool) {
 		switch bs[0] {
 		case 1:
 			snap := SnapShoot{}
-			err := snap.UnM(bs[1:], p.manager.playerLeader.PlayerCardsCreator)
+			err := snap.Unmarshal(bs[1:], p.manager.playerLeader.PlayerCardsCreator)
 			if err != nil {
-				log.Error("snap.UnM Err:", err)
+				log.Error("snap.Unmarshal Err:", err)
 				return
 			}
 			p.manager.Players = snap.Players
@@ -77,9 +77,9 @@ func (p *Storage) Recovery() (has bool) {
 			has = true
 		case 2:
 			step := &Step{}
-			err := step.UnM(bs[1:])
+			err := step.Unmarshal(bs[1:])
 			if err != nil {
-				log.Error("step.UnM Err:", err)
+				log.Error("step.Unmarshal Err:", err)
 				return
 			}
 			steps = append(steps, step)
@@ -102,9 +102,9 @@ func (p *Storage) Recovery() (has bool) {
 }
 
 // 保存玩家操作日志
-func (p *Storage) Step(player *Player, request *PlayerActionRequest) {
+func (p *Storage) Step(player Player, request *PlayerActionRequest) {
 	s := Step{
-		PlayerId:      player.Id,
+		PlayerId:      player.GetId(),
 		ActionRequest: request,
 	}
 	sBs, err := json.Marshal(&s)
@@ -158,20 +158,16 @@ func (p *Storage) PopStep(playerId string) (action *PlayerActionRequest, has boo
 
 var sp = []byte("@#$%$#@")
 var spPlayer = []byte("^&*(*&^")
-var spPlayerId = []byte("^&ID&^")
 
-func (s *SnapShoot) M() (bs []byte, err error) {
+func (s *SnapShoot) Marshal() (bs []byte, err error) {
 	var buff bytes.Buffer
 	playerBs := [][]byte{}
 	for _, player := range s.Players {
-		pbs, e := player.PlayerCards.Marshal()
+		pbs, e := player.Marshal()
 		if e != nil {
 			err = e
 			return
 		}
-		pbs = append(pbs, spPlayerId...)
-		// 添加id
-		pbs = append(pbs, []byte(player.Id)...)
 		playerBs = append(playerBs, pbs)
 	}
 	// 写入玩家
@@ -192,7 +188,7 @@ func (s *SnapShoot) M() (bs []byte, err error) {
 	return
 }
 
-func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerCards) (err error) {
+func (s *SnapShoot) Unmarshal(bs []byte, PlayerCreator func() Player) (err error) {
 	bsp := bytes.Split(bs, sp)
 	if len(bsp) != 3 {
 		err = errors.New("bad format")
@@ -211,14 +207,8 @@ func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerCards) (err error)
 	lenPlayer := len(playerBs)
 	players := make(Players, lenPlayer)
 	for i, pbs := range playerBs {
-		idAI := bytes.Split(pbs, spPlayerId)
-		if len(idAI) != 2 {
-			err = errors.New("bad format: playerId")
-			return
-		}
-		id := string(idAI[1])
-		player := NewPlayer(id, PlayerCreator)
-		err = player.PlayerCards.Unmarshal(idAI[0])
+		player := PlayerCreator()
+		err = player.Unmarshal(pbs)
 		if err != nil {
 			return
 		}
@@ -236,12 +226,12 @@ func (s *SnapShoot) UnM(bs []byte, PlayerCreator func() PlayerCards) (err error)
 	return
 }
 
-func (s *Step) M() (bs []byte, err error) {
+func (s *Step) Marshal() (bs []byte, err error) {
 	bs, err = json.Marshal(s)
 	return
 }
 
-func (s *Step) UnM(bs []byte) (err error) {
+func (s *Step) Unmarshal(bs []byte) (err error) {
 	err = json.Unmarshal(bs, s)
 	return
 }

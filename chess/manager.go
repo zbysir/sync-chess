@@ -22,14 +22,14 @@ type Manager struct {
 	ctxCancel            func()                               // ctx关闭func
 	ctx                  context.Context                      //
 
-	RoundStartPlayer     *Player                // 每轮开始者
+	RoundStartPlayer     Player                // 每轮开始者
 	Players              Players                // 所有玩家
 	LastPlayerNeedAction map[string]ActionTypes // 最后一次需要玩家的动作, 用于玩家重连重新发送请求
 	MessageHandler       MessageHandler         // 消息通知
 }
 
 type WaitActionPlayer struct {
-	Player     *Player
+	Player     Player
 	CanActions ActionTypes
 }
 
@@ -64,31 +64,31 @@ func (p *Manager) Start() {
 			p.isInitFromStorage = false
 		}
 
-		as := p.GetCanActions(p.RoundStartPlayer, true, 0)
-		p.NotifyNeedAction(p.RoundStartPlayer, as)
+		as := p.getCanActions(p.RoundStartPlayer, true, 0)
+		p.notifyNeedAction(p.RoundStartPlayer, as)
 		ctxTime, _ := context.WithTimeout(ctx, timeout)
 	getRoundPlayerAction:
-		a, err := p.GetPlayerAction(ctxTime, p.RoundStartPlayer, as, 0)
+		a, err := p.getPlayerAction(ctxTime, p.RoundStartPlayer, as, 0)
 		if err != nil {
-			p.NotifyNeedAction(p.RoundStartPlayer, as)
+			p.notifyNeedAction(p.RoundStartPlayer, as)
 			goto getRoundPlayerAction
 		}
-		log.Info("GetPlayerAction", "%+v %+v", p.RoundStartPlayer, a)
+		log.Info("getPlayerAction", "%+v %+v", p.RoundStartPlayer, a)
 
 		switch a.Types {
 		case AT_Play:
 			// 出牌
-			err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
+			err := p.RoundStartPlayer.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
-				p.NotifyNeedAction(p.RoundStartPlayer, as)
+				p.notifyNeedAction(p.RoundStartPlayer, as)
 				goto getRoundPlayerAction
 			}
-			p.DoActionAfter(p.RoundStartPlayer, a)
+			p.doActionAfter(p.RoundStartPlayer, a)
 
 			card := a.Card
 			waitActionPlayer := []WaitActionPlayer{}
 			for _, player := range p.Players.Exclude(p.RoundStartPlayer) {
-				as := p.GetCanActions(player, false, card)
+				as := p.getCanActions(player, false, card)
 				if len(as) == 0 {
 					continue
 				}
@@ -96,7 +96,7 @@ func (p *Manager) Start() {
 				if len(as) == 1 && as[0] == AT_Pass {
 					continue
 				}
-				p.NotifyNeedAction(player, as)
+				p.notifyNeedAction(player, as)
 				// 胡牌优先选择
 				if as.Contain(AT_HuDian) {
 					waitActionPlayer = append([]WaitActionPlayer{{Player: player, CanActions: as}}, waitActionPlayer...)
@@ -110,31 +110,31 @@ func (p *Manager) Start() {
 
 				ctxTime, _ := context.WithTimeout(ctx, timeout)
 			getOtherPlayerAction:
-				a, err := p.GetPlayerAction(ctxTime, player, wap.CanActions, card)
+				a, err := p.getPlayerAction(ctxTime, player, wap.CanActions, card)
 				// 超时未响应则执行自动打牌
 				if err != nil {
-					p.NotifyNeedAction(player, wap.CanActions)
+					p.notifyNeedAction(player, wap.CanActions)
 					goto getOtherPlayerAction
 				}
 
-				log.Info("GetPlayerAction", "%+v %+v", player, a)
+				log.Info("getPlayerAction", "%+v %+v", player, a)
 				switch a.Types {
 				case AT_Pass:
-					p.DoActionAfter(player, a)
+					p.doActionAfter(player, a)
 					continue
 				case AT_GangDian:
 					// 胡牌和杠碰是互斥的
 					// 胡过之后就不能杠碰
 					if !isHasHu {
-						err := player.PlayerCards.DoAction(a, p.RoundStartPlayer)
+						err := player.DoAction(a, p.RoundStartPlayer)
 						if err != nil {
-							p.NotifyNeedAction(player, wap.CanActions)
+							p.notifyNeedAction(player, wap.CanActions)
 							goto getOtherPlayerAction
 						}
-						p.DoActionAfter(player, a)
+						p.doActionAfter(player, a)
 
 						p.RoundStartPlayer = player
-						err = p.GetCard(p.RoundStartPlayer)
+						err = p.getCard(p.RoundStartPlayer)
 						if err != nil {
 							// 没牌了,直接结束
 							goto end
@@ -143,23 +143,23 @@ func (p *Manager) Start() {
 					}
 				case AT_Peng:
 					if !isHasHu {
-						err = player.PlayerCards.DoAction(a, p.RoundStartPlayer)
+						err = player.DoAction(a, p.RoundStartPlayer)
 						if err != nil {
-							p.NotifyNeedAction(player, wap.CanActions)
+							p.notifyNeedAction(player, wap.CanActions)
 							goto getOtherPlayerAction
 						}
-						p.DoActionAfter(player, a)
+						p.doActionAfter(player, a)
 						p.RoundStartPlayer = player
 						goto startRound
 					}
 				case AT_HuDian:
 					isHasHu = true
-					err := player.PlayerCards.DoAction(a, p.RoundStartPlayer)
+					err := player.DoAction(a, p.RoundStartPlayer)
 					if err != nil {
-						p.NotifyNeedAction(player, wap.CanActions)
+						p.notifyNeedAction(player, wap.CanActions)
 						goto getOtherPlayerAction
 					}
-					p.DoActionAfter(player, a)
+					p.doActionAfter(player, a)
 				}
 			}
 
@@ -170,7 +170,7 @@ func (p *Manager) Start() {
 
 			// 若没人动作 下家摸牌
 			p.RoundStartPlayer = p.playerLeader.Next(p.RoundStartPlayer, p.Players)
-			err = p.GetCard(p.RoundStartPlayer)
+			err = p.getCard(p.RoundStartPlayer)
 			if err != nil {
 				// 没牌了,直接结束
 				goto end
@@ -178,15 +178,15 @@ func (p *Manager) Start() {
 
 			goto startRound
 		case AT_GangAn:
-			err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
+			err := p.RoundStartPlayer.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
-				p.NotifyNeedAction(p.RoundStartPlayer, as)
+				p.notifyNeedAction(p.RoundStartPlayer, as)
 				goto getRoundPlayerAction
 			}
-			p.DoActionAfter(p.RoundStartPlayer, a)
+			p.doActionAfter(p.RoundStartPlayer, a)
 
 			// 摸牌
-			err = p.GetCard(p.RoundStartPlayer)
+			err = p.getCard(p.RoundStartPlayer)
 			if err != nil {
 				// 没牌了,直接结束
 				goto end
@@ -197,10 +197,10 @@ func (p *Manager) Start() {
 			// 判断其他玩家有不有胡
 			waitActionPlayer := []WaitActionPlayer{}
 			for _, player := range p.Players.Exclude(p.RoundStartPlayer) {
-				as := p.GetCanActions(player, false, card)
+				as := p.getCanActions(player, false, card)
 				if as.Contain(AT_HuDian) {
 					as = ActionTypes{AT_HuQiangGang, AT_Pass}
-					p.NotifyNeedAction(player, as)
+					p.notifyNeedAction(player, as)
 					waitActionPlayer = append(waitActionPlayer, WaitActionPlayer{Player: player, CanActions: as})
 				}
 			}
@@ -211,23 +211,23 @@ func (p *Manager) Start() {
 				player := wap.Player
 				ctxTime, _ := context.WithTimeout(ctx, timeout)
 			getBuGangAction:
-				a, err := p.GetPlayerAction(ctxTime, player, wap.CanActions, card)
+				a, err := p.getPlayerAction(ctxTime, player, wap.CanActions, card)
 				if err != nil {
-					p.NotifyNeedAction(player, wap.CanActions)
+					p.notifyNeedAction(player, wap.CanActions)
 					goto getBuGangAction
 				}
-				log.Info("GetPlayerAction", "%+v %+v", player, a)
+				log.Info("getPlayerAction", "%+v %+v", player, a)
 				switch a.Types {
 				case AT_Pass:
-					p.DoActionAfter(player, a)
+					p.doActionAfter(player, a)
 					continue
 				case AT_HuQiangGang:
-					err := player.PlayerCards.DoAction(a, p.RoundStartPlayer)
+					err := player.DoAction(a, p.RoundStartPlayer)
 					if err != nil {
 						// 抢杠胡都有错误? 那就当pass了吧
 						continue
 					}
-					p.DoActionAfter(player, a)
+					p.doActionAfter(player, a)
 
 					isHasHu = true
 				}
@@ -240,15 +240,15 @@ func (p *Manager) Start() {
 				}
 			} else {
 				// 补杠逻辑
-				err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
+				err := p.RoundStartPlayer.DoAction(a, p.RoundStartPlayer)
 				if err != nil {
-					p.NotifyNeedAction(p.RoundStartPlayer, as)
+					p.notifyNeedAction(p.RoundStartPlayer, as)
 					goto getRoundPlayerAction
 				}
-				p.DoActionAfter(p.RoundStartPlayer, a)
+				p.doActionAfter(p.RoundStartPlayer, a)
 
 				// 摸牌
-				err = p.GetCard(p.RoundStartPlayer)
+				err = p.getCard(p.RoundStartPlayer)
 				if err != nil {
 					// 没牌了,直接结束
 					goto end
@@ -257,12 +257,12 @@ func (p *Manager) Start() {
 				goto startRound
 			}
 		case AT_HuZiMo:
-			err := p.RoundStartPlayer.PlayerCards.DoAction(a, p.RoundStartPlayer)
+			err := p.RoundStartPlayer.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
-				p.NotifyNeedAction(p.RoundStartPlayer, as)
+				p.notifyNeedAction(p.RoundStartPlayer, as)
 				goto getRoundPlayerAction
 			}
-			p.DoActionAfter(p.RoundStartPlayer, a)
+			p.doActionAfter(p.RoundStartPlayer, a)
 
 			// 自摸胡牌检查是否需要结束游戏
 			if p.isNeedStopGame {
@@ -308,26 +308,26 @@ func (p *Manager) Wait() {
 }
 
 // 玩家成功动作后记录,并响应玩家
-func (p *Manager) DoActionAfter(player *Player, action *PlayerActionRequest, ) {
-	if action.ActionFrom != AF_Storage {
-		p.storage.Step(player, action)
-		rsp := &PlayerActionResponse{
-			ActionFrom: action.ActionFrom,
-			Card:       action.Card,
-			Types:      action.Types,
-		}
-		notice := &PlayerActionNotice{
-			Types:      action.Types,
-			Card:       action.Card,
-			PlayerFrom: player,
-		}
-		p.MessageHandler.NotifyActionResponse(player.Id, rsp)
-		p.NotifyOtherPlayerAction(player, notice)
-	}
+func (p *Manager) doActionAfter(player Player, action *PlayerActionRequest, ) {
+	//if action.ActionFrom != AF_Storage {
+	//	p.storage.Step(player, action)
+	//	rsp := &PlayerActionResponse{
+	//		ActionFrom: action.ActionFrom,
+	//		Card:       action.Card,
+	//		Types:      action.Types,
+	//	}
+	//	notice := &PlayerActionNotice{
+	//		Types:      action.Types,
+	//		Card:       action.Card,
+	//		PlayerFrom: player,
+	//	}
+	//	p.MessageHandler.NotifyActionResponse(player.Id, rsp)
+	//	p.notifyOtherPlayerAction(player, notice)
+	//}
 }
 
 // 摸牌
-func (p *Manager) GetCard(player *Player) (err error) {
+func (p *Manager) getCard(player Player) (err error) {
 	cards, ok := p.cardGenerator.GetCards(1)
 	if !ok {
 		err = errors.New("not cards")
@@ -338,41 +338,127 @@ func (p *Manager) GetCard(player *Player) (err error) {
 		Card:  card,
 		Types: AT_Get,
 	}
-	err = player.PlayerCards.DoAction(action, player)
+	err = player.DoAction(action, player)
 	if err != nil {
 		return
 	}
-	rsp := &PlayerActionResponse{
-		ActionFrom: action.ActionFrom,
-		Card:       action.Card,
-		Types:      action.Types,
-	}
-	notice := &PlayerActionNotice{
-		Types:      action.Types,
-		Card:       action.Card,
-		PlayerFrom: player,
-	}
-	p.MessageHandler.NotifyActionResponse(player.Id, rsp)
-	p.NotifyOtherPlayerAction(player, notice)
+	//rsp := &PlayerActionResponse{
+	//	ActionFrom: action.ActionFrom,
+	//	Card:       action.Card,
+	//	Types:      action.Types,
+	//}
+	//notice := &PlayerActionNotice{
+	//	Types:      action.Types,
+	//	Card:       action.Card,
+	//	PlayerFrom: player,
+	//}
+	//p.MessageHandler.NotifyActionResponse(player.Id, rsp)
+	//p.notifyOtherPlayerAction(player, notice)
 	return
 }
 
 // 通知其他人消息
-func (p *Manager) NotifyOtherPlayerAction(currPlayer *Player, notice *PlayerActionNotice) {
+func (p *Manager) notifyOtherPlayerAction(currPlayer Player, notice *PlayerActionNotice) {
 	// pass 消息不需要告知其他人
-	if notice.Types == AT_Pass {
+	//if notice.Types == AT_Pass {
+	//	return
+	//}
+	//
+	//if notice.Types == AT_Get {
+	//	notice.Card = 0
+	//}
+	//
+	//otherPlayer := p.Players.Exclude(currPlayer)
+	//for _, player := range otherPlayer {
+	//	p.MessageHandler.NotifyFromOtherPlayerAction(player.Id, notice)
+	//}
+
+	return
+}
+
+func (p *Manager) startGame() {
+	// 选庄家
+	p.RoundStartPlayer = p.Players[0]
+	p.cardGenerator.Reset()
+	p.cardGenerator.Shuffle()
+
+	// 发牌
+	for _, player := range p.Players {
+		if player == p.RoundStartPlayer {
+			cards, _ := p.cardGenerator.GetCards(14)
+			player.SetCards(cards)
+		} else {
+			cards, _ := p.cardGenerator.GetCards(13)
+			player.SetCards(cards)
+		}
+	}
+}
+
+func (p *Manager) notifyNeedAction(player Player, actions ActionTypes) {
+	// 有动作存档 就不发送通知,而是直接读取
+	playerId := player.GetId()
+	if p.storage.HasStep(playerId) {
 		return
 	}
 
-	if notice.Types == AT_Get {
-		notice.Card = 0
+	// 开启通道
+	if c, ok := p.playerActionRequestC[playerId]; ok {
+		<-c
+	} else {
+		p.playerActionRequestC[playerId] = make(chan *PlayerActionRequest, 1)
+	}
+	// 保存玩家需要的动作, 用于重连时重发
+	p.LastPlayerNeedAction[playerId] = actions
+	p.MessageHandler.NotifyNeedAction(playerId, actions)
+}
+
+// isFirst 是否该他出牌
+// card 能够吃的牌(其他人打来的)
+func (p *Manager) getCanActions(player Player, isFirst bool, card Card) (actions ActionTypes) {
+	// 有动作存档 就不需要或者CanAction
+	if p.storage.HasStep(player.GetId()) {
+		return
+	}
+	actions = player.CanActions(isFirst, card)
+	return
+}
+
+// 阻塞获取玩家动作
+func (p *Manager) getPlayerAction(ctx context.Context, player Player, canActions ActionTypes, card Card) (action *PlayerActionRequest, err error) {
+	playerId := player.GetId()
+	// 有动作存档 直接读取
+	if a, ok := p.storage.PopStep(playerId); ok {
+		action = a
+		action.ActionFrom = AF_Storage
+		return
+	}
+	select {
+	case action = <-p.playerActionRequestC[playerId]:
+		p.playerActionRequestC[playerId] <- nil
+		delete(p.LastPlayerNeedAction, playerId)
+
+		// 错误的动作, 重新获取
+		if !canActions.Contain(action.Types) {
+			err = ERR_BadActionTypeNeedRetry
+			return
+		}
+		action.ActionFrom = AF_Player
+	case <-ctx.Done():
+		// 写入一个空 占满通道让他关闭接收消息
+		p.playerActionRequestC[playerId] <- nil
+		delete(p.LastPlayerNeedAction, playerId)
+
+		// 超时就自动打牌
+		action = p.getPlayerActionAuto(player, canActions, card)
 	}
 
-	otherPlayer := p.Players.Exclude(currPlayer)
-	for _, player := range otherPlayer {
-		p.MessageHandler.NotifyFromOtherPlayerAction(player.Id, notice)
-	}
+	return
+}
 
+// 获取玩家自动动作
+func (p *Manager) getPlayerActionAuto(player Player, canActions ActionTypes, card Card) (action *PlayerActionRequest) {
+	action = player.RequestActionAuto(canActions, card)
+	action.ActionFrom = AF_Auto
 	return
 }
 
@@ -397,92 +483,6 @@ func (p *Manager) WritePlayerAction(playerId string, action *PlayerActionRequest
 	return
 }
 
-func (p *Manager) startGame() {
-	// 选庄家
-	p.RoundStartPlayer = p.Players[0]
-	p.cardGenerator.Reset()
-	p.cardGenerator.Shuffle()
-
-	// 发牌
-	for _, player := range p.Players {
-		if player == p.RoundStartPlayer {
-			cards, _ := p.cardGenerator.GetCards(14)
-			player.PlayerCards.SetCards(cards)
-		} else {
-			cards, _ := p.cardGenerator.GetCards(13)
-			player.PlayerCards.SetCards(cards)
-		}
-	}
-}
-
-func (p *Manager) NotifyNeedAction(player *Player, actions ActionTypes) {
-	// 有动作存档 就不发送通知,而是直接读取
-	playerId := player.Id
-	if p.storage.HasStep(playerId) {
-		return
-	}
-
-	// 开启通道
-	if c, ok := p.playerActionRequestC[playerId]; ok {
-		<-c
-	} else {
-		p.playerActionRequestC[playerId] = make(chan *PlayerActionRequest, 1)
-	}
-	// 保存玩家需要的动作, 用于重连时重发
-	p.LastPlayerNeedAction[playerId] = actions
-	p.MessageHandler.NotifyNeedAction(playerId, actions)
-}
-
-// isFirst 是否该他出牌
-// card 能够吃的牌(其他人打来的)
-func (p *Manager) GetCanActions(player *Player, isFirst bool, card Card) (actions ActionTypes) {
-	// 有动作存档 就不需要或者CanAction
-	if p.storage.HasStep(player.Id) {
-		return
-	}
-	actions = player.PlayerCards.CanActions(isFirst, card)
-	return
-}
-
-// 阻塞获取玩家动作
-func (p *Manager) GetPlayerAction(ctx context.Context, player *Player, canActions ActionTypes, card Card) (action *PlayerActionRequest, err error) {
-	playerId := player.Id
-	// 有动作存档 直接读取
-	if a, ok := p.storage.PopStep(playerId); ok {
-		action = a
-		action.ActionFrom = AF_Storage
-		return
-	}
-	select {
-	case action = <-p.playerActionRequestC[playerId]:
-		p.playerActionRequestC[playerId] <- nil
-		delete(p.LastPlayerNeedAction, playerId)
-
-		// 错误的动作, 重新获取
-		if !canActions.Contain(action.Types) {
-			err = ERR_BadActionTypeNeedRetry
-			return
-		}
-		action.ActionFrom = AF_Player
-	case <-ctx.Done():
-		// 写入一个空 占满通道让他关闭接收消息
-		p.playerActionRequestC[playerId] <- nil
-		delete(p.LastPlayerNeedAction, playerId)
-
-		// 超时就自动打牌
-		action = p.GetPlayerActionAuto(player, canActions, card)
-	}
-
-	return
-}
-
-// 获取玩家自动动作
-func (p *Manager) GetPlayerActionAuto(player *Player, canActions ActionTypes, card Card) (action *PlayerActionRequest) {
-	action = player.PlayerCards.RequestActionAuto(canActions, card)
-	action.ActionFrom = AF_Auto
-	return
-}
-
 // 添加玩家
 func (p *Manager) AddPlayer(playerId string) (err error) {
 	_, index := p.Players.Find(playerId)
@@ -497,10 +497,7 @@ func (p *Manager) AddPlayer(playerId string) (err error) {
 		return
 	}
 
-	player := &Player{
-		Id:          playerId,
-		PlayerCards: p.playerLeader.PlayerCardsCreator(),
-	}
+	player := p.playerLeader.PlayerCardsCreator()
 	if !p.Players.Add(player) {
 		err = errors.New("add player error")
 		return

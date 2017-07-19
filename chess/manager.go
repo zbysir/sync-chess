@@ -16,7 +16,6 @@ type Manager struct {
 	playerLeader      PlayerLeader // 玩家领导
 	isInitFromStorage bool         // 是否是从存档恢复
 	isStarted         bool         // 是否开始了游戏
-	isInit            bool         // 是否以及初始化过了, 每个对象创建出来 只需要初始化一次
 
 	playerActionRequestC map[string]chan *PlayerActionRequest // 玩家动作请求队列
 	isNeedStopGame       bool                                 // 是否在这小回合结束后结束游戏
@@ -30,6 +29,11 @@ type Manager struct {
 	MessageHandler       MessageHandler         // 消息通知
 }
 
+// 组件
+type Component interface {
+	Mount(manager *Manager) // 基本上所有的组件都需要用到manager, 所以加一个挂载的生命周期
+}
+
 type WaitActionPlayer struct {
 	Player     Player
 	CanActions ActionTypes
@@ -39,9 +43,6 @@ var timeout = time.Second * 10000
 
 // 开始监督(游戏进行中)
 func (p *Manager) Start() {
-	if !p.isInit {
-		panic("not init, please call Manager.Init()")
-	}
 	if p.isStarted {
 		return
 	}
@@ -131,6 +132,7 @@ func (p *Manager) Start() {
 					// 胡牌和杠碰是互斥的
 					// 胡过之后就不能杠碰
 					if !isHasHu {
+						a.Card = card
 						err := player.DoAction(a, p.RoundStartPlayer)
 						if err != nil {
 							p.notifyNeedAction(player, wap.CanActions)
@@ -148,6 +150,7 @@ func (p *Manager) Start() {
 					}
 				case AT_Peng:
 					if !isHasHu {
+						a.Card = card
 						err = player.DoAction(a, p.RoundStartPlayer)
 						if err != nil {
 							p.notifyNeedAction(player, wap.CanActions)
@@ -158,6 +161,7 @@ func (p *Manager) Start() {
 						goto startRound
 					}
 				case AT_HuDian:
+					a.Card = card
 					isHasHu = true
 					err := player.DoAction(a, p.RoundStartPlayer)
 					if err != nil {
@@ -196,8 +200,11 @@ func (p *Manager) Start() {
 				// 没牌了,直接结束
 				goto end
 			}
+
+			goto startRound
 		case AT_GangBu:
-			// 抢杠胡(补杠)
+			// 这里有个特殊逻辑是 抢杠胡(补杠)
+			// 如果还有其它特殊逻辑包含不到的就在个方法里修改吧, 也就200+行
 			card := a.Card
 			// 判断其他玩家有不有胡
 			waitActionPlayer := []WaitActionPlayer{}
@@ -259,8 +266,9 @@ func (p *Manager) Start() {
 					goto end
 				}
 				log.Debug("goto startRound")
-				goto startRound
 			}
+
+			goto startRound
 		case AT_HuZiMo:
 			err := p.RoundStartPlayer.DoAction(a, p.RoundStartPlayer)
 			if err != nil {
@@ -335,18 +343,6 @@ func (p *Manager) getCard(player Player) (err error) {
 	if err != nil {
 		return
 	}
-	//rsp := &PlayerActionResponse{
-	//	ActionFrom: action.ActionFrom,
-	//	Card:       action.Card,
-	//	Types:      action.Types,
-	//}
-	//notice := &PlayerActionNotice{
-	//	Types:      action.Types,
-	//	Card:       action.Card,
-	//	PlayerFrom: player,
-	//}
-	//p.MessageHandler.NotifyActionResponse(player.Id, rsp)
-	//p.notifyOtherPlayerAction(player, notice)
 	return
 }
 
@@ -499,16 +495,6 @@ func (p *Manager) RemovePlayer(playerId string) (err error) {
 	return
 }
 
-// 初始化, 尝试从存档恢复现场
-func (p *Manager) Init() {
-	p.isInit = true
-	// 尝试读档
-	p.isInitFromStorage = p.storage.Recovery()
-	if p.isInitFromStorage {
-		p.Start()
-	}
-}
-
 func NewManager(id string, cardGenerator CardGenerator, playerLeader PlayerLeader, messageHandler MessageHandler) *Manager {
 	m := &Manager{
 		Id:                   id,
@@ -516,9 +502,24 @@ func NewManager(id string, cardGenerator CardGenerator, playerLeader PlayerLeade
 		CardGenerator:        cardGenerator,
 		playerLeader:         playerLeader,
 		MessageHandler:       messageHandler,
+		storage:              NewStorage(),
 		LastPlayerNeedAction: map[string]ActionTypes{},
 		playerActionRequestC: map[string]chan *PlayerActionRequest{},
 	}
-	m.storage = NewStorage(m)
+	cs := []interface{}{
+		m.storage, m.CardGenerator, m.playerLeader, m.MessageHandler,
+	}
+
+	for _, c := range cs {
+		if component, ok := c.(Component); ok {
+			component.Mount(m)
+		}
+	}
+
+	m.isInitFromStorage = m.storage.Recovery()
+	if m.isInitFromStorage {
+		m.Start()
+	}
+
 	return m
 }

@@ -3,9 +3,9 @@ package chess
 type Players []Player
 
 // 排除
-func (p *Players) Exclude(players ...Player) (ps Players) {
+func (p Players) Exclude(players ...Player) (ps Players) {
 	ps = Players{}
-	for _, player := range *p {
+	for _, player := range p {
 		isExclude := false
 		for _, eplayer := range players {
 			if eplayer == player {
@@ -19,9 +19,9 @@ func (p *Players) Exclude(players ...Player) (ps Players) {
 	return
 }
 
-func (p *Players) Ids() (ids []string) {
-	ids = make([]string, len(*p))
-	for i, player := range *p {
+func (p Players) Ids() (ids []string) {
+	ids = make([]string, len(p))
+	for i, player := range p {
 		ids[i] = player.GetId()
 	}
 
@@ -29,12 +29,12 @@ func (p *Players) Ids() (ids []string) {
 }
 
 // 得到下家
-func (p *Players) After(currPlayer Player) (player Player) {
-	player = (*p)[0]
-	l := len(*p)
+func (p Players) After(currPlayer Player) (player Player) {
+	player = (p)[0]
+	l := len(p)
 	for i := 0; i < l-1; i++ {
-		if (*p)[i] == currPlayer {
-			player = (*p)[i+1]
+		if (p)[i] == currPlayer {
+			player = (p)[i+1]
 		}
 	}
 

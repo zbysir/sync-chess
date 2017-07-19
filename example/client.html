@@ -8,17 +8,28 @@
 <body>
 <div id="app">
     <div class="desk">
-        <div class="player" v-for="player in players">
+        <div class="player" v-for="(player,playerIndex) in players">
             <div class="hand-cards">
-                <div class="card" v-for="card in player.Cards" @click="playCard(card)">{{card}}</div>
+                <div class="card" :style="{height:$index==chooseCardIndex&&playerIndex==0?'50px':'30px'}"
+                     v-for="(card,$index) in player.Cards" @click="choose($index)">{{card}}
+                </div>
             </div>
             <div class="played-cards">
-                <div class="card" v-for="card in player.PlayedCards" >{{card}}</div>
+                <div class="card" v-for="card in player.PlayedCards">{{card}}</div>
+            </div>
+            <div class="played-cards peng-cards">
+                碰:
+                <div class="card" v-for="card in player.Pengs">{{card}}</div>
+            </div>
+            <div class="played-cards gang-cards">
+                杠:
+                <div class="card" v-for="gang in player.Gangs">{{gang.Card}}</div>
             </div>
         </div>
 
-        <div class="notify-action" v-if="canAction">请动作</div>
-        <div class="notify-play" v-if="canPlay">请出牌</div>
+        <div class="notify-action">
+            <div class="action" v-for="a in canActions" @click="action(a)">{{actionName[a]}}</div>
+        </div>
     </div>
 </div>
 </body>
@@ -27,26 +38,51 @@
     var app = new Vue({
         el: '#app',
         data: {
+            chooseCardIndex: -1,
             players: [],
-            canAction: false,// 能否动作
+            canActions: [],// 能够进行的动作
             canPlay: false,// 能否出牌
+            actionName: {
+                2: "出牌", 3: "碰",
+                4: "直杠", 5: "暗杠", 6: "补杠",
+                7: "点炮胡", 8: "自摸", 9: "抢杠胡",
+                10: "亮倒", 11: "Pass"
+            }
         },
         methods: {
-            playCard: function (card) {
-                if (!card) {
-                    return
+
+            action: function (types) {
+                var card = 0
+                if (app.chooseCardIndex !== -1) {
+                    var p = app.findPlayer(uid)
+                    card = p.Cards[app.chooseCardIndex]
                 }
-                if (!app.canPlay) {
-                    console.log("can not play")
-                    return
-                }
+
+                app.doAction(card, types)
+            },
+            choose: function (index) {
+                app.chooseCardIndex = index
+            },
+            doAction: function (card, types) {
                 var Action = {
-                    Types: 2,
+                    Types: types,
                     Card: card,
                 }
                 var s = JSON.stringify({Cmd: 100, Action: Action})
-                console.log(ws.send(s))
+                ws.send(s)
+                console.log("doAction", s)
 
+                app.canActions = []
+                app.canPlay = false
+                app.chooseCardIndex = -1
+            },
+            findPlayer: function (id) {
+                for (var i in app.players) {
+                    if (app.players[i].Id == id) {
+                        return app.players[i]
+                    }
+                }
+                return null
             }
         }
     })
@@ -57,8 +93,9 @@
     var ws = new WebSocket("ws://localhost:10010/");
     ws.onmessage = function (e) {
         var data = JSON.parse(e.data)
-        console.log(data)
+        console.log("message", data)
         switch (data.Cmd) {
+            case 1004:
             case 1003:
                 // 重构players数组
                 // 让第一个始终是自己
@@ -81,16 +118,93 @@
                             players[ti].Cards.push(0)
                         }
                     }
+                    if (!players[ti].PlayedCards) {
+                        players[ti].PlayedCards = []
+                    }
+                    if (!players[ti].Pengs) {
+                        players[ti].Pengs = []
+                    }
+                    if (!players[ti].Gangs) {
+                        players[ti].Gangs = []
+                    }
                 }
                 console.log("players", players)
                 app.players = players
-            case 1004:
+
                 break
             case 1000:
-                app.canAction = true
+                // 通知该玩家动作了
+                app.canActions = data.Actions
                 if (data.Actions.indexOf(2) !== -1) {
                     app.canPlay = true
                 }
+                break
+            case 1001:
+                // 动作响应
+                var p = app.findPlayer(uid)
+                var card = data.Action.Card
+                switch (data.Action.Types) {
+                    case 2:
+                        // 玩家出牌
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+                        p.PlayedCards.push(card)
+                        break
+                    case 3:
+                        // 碰
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+
+                        p.Pengs.push(card)
+                        break
+                    case 5:
+                        // 暗杠
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+
+                        p.Gangs.push({Card:card})
+                        break
+                    case 1:
+                        p.Cards.push(card)
+                        break
+                }
+
+                break
+            case 1002:
+                // 其它玩家动作通知
+                var p = app.findPlayer(data.Notice.PlayerIdFrom)
+                var card = data.Notice.Card
+
+                switch (data.Notice.Types) {
+                    case 2:
+                        // 出牌
+                        p.Cards.splice(0, 1)
+                        p.PlayedCards.push(card)
+                        break
+                    case 3:
+                        // 碰
+                        p.Pengs.push(card)
+                        p.Cards.splice(0, 2)
+                        break
+                    case 5:
+                        // 暗杠
+                        p.Gangs.push({Card:card})
+                        p.Cards.splice(0, 4)
+                        break
+                    case 1:
+                        // 摸牌
+                        p.Cards.push(0)
+                        break
+                }
+                break
 
         }
 //        app.message = e.data
@@ -131,9 +245,18 @@
     }
 
     .desk .notify-action {
-        top: 50%;
-        left: 50%;
+        bottom: 100px;
+        left: 10%;
         position: absolute;
+    }
+
+    .desk .notify-action .action {
+        width: 60px;
+        height: 30px;
+        margin: 5px;
+        background-color: darkslategrey;
+        color: white;
+        display: inline-block;
     }
 
     .desk .notify-play {
@@ -144,10 +267,35 @@
 
     .player {
         position: absolute;
+        display: flex;
     }
 
-    .hand-cards,.played-cards{
+    .hand-cards, .played-cards {
         padding: 8px;
+    }
+
+    .hand-cards, .peng-cards {
+        padding: 8px;
+    }
+
+    .hand-cards, .gang-cards {
+        padding: 8px;
+    }
+
+    .hand-cards .card {
+        width: 30px;
+        height: 30px;
+        background-color: #ffffff;
+        border: 1px solid #004b8b;
+        cursor: pointer;
+    }
+
+    .played-cards .card {
+        width: 15px;
+        height: 15px;
+        background-color: #ffffff;
+        border: 1px solid #004b8b;
+        cursor: pointer;
     }
 
     /*--*/
@@ -155,6 +303,7 @@
     .player:nth-child(1) {
         bottom: 0;
         background-color: #5a84ff;
+        flex-direction: column-reverse;
     }
 
     .player:nth-child(1) .card {
@@ -170,6 +319,7 @@
     .player:nth-child(2) {
         right: 0;
         background-color: #5a84ff;
+        flex-direction: row-reverse;
     }
 
     /*--*/
@@ -177,6 +327,7 @@
     .player:nth-child(3) {
         left: 0;
         background-color: #5a84ff;
+        flex-direction: row;
     }
 
     /*--*/
@@ -193,12 +344,8 @@
         background-color: #5a84ff;
     }
 
-    .card {
-        width: 30px;
-        height: 30px;
-        background-color: #ffffff;
-        border: 1px solid #004b8b;
-        cursor: pointer;
-    }
+    /*--*/
+
+
 </style>
 </html>

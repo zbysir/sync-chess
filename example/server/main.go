@@ -57,6 +57,11 @@ func handler(con conn_wrap.Interface) {
 		case chess_i.CMD_JoinRoom:
 			// 登录
 			uid = bj.Pos("Uid").String()
+			if uid == "" {
+				con.Close()
+				break
+			}
+
 			room_id = bj.Pos("RoomId").String()
 			con.Subscribe("uid" + uid)
 

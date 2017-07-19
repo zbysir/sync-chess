@@ -92,7 +92,7 @@ func TestPlayPengHu(t *testing.T) {
 //	p1.Id = "p1"
 //	p2.Id = "p2"
 //	p3.Id = "p3"
-//	m := core.Manager{
+//	m := core.manager{
 //		Players: core.Players{
 //			p1, p2, p3,
 //		},
@@ -118,7 +118,7 @@ func TestPlayPengHu(t *testing.T) {
 //	p1.Id = "p1"
 //	p2.Id = "p2"
 //	p3.Id = "p3"
-//	m := core.Manager{
+//	m := core.manager{
 //		Players: core.Players{
 //			p1, p2, p3,
 //		},
@@ -202,7 +202,7 @@ func TestPlayPengHu(t *testing.T) {
 //	p1.Id = "p1"
 //	p2.Id = "p2"
 //	p3.Id = "p3"
-//	m := core.Manager{
+//	m := core.manager{
 //		Players: core.Players{
 //			p1, p2, p3,
 //		},
@@ -279,7 +279,7 @@ func TestPlayPengHu(t *testing.T) {
 //	p1.Id = "p1"
 //	p2.Id = "p2"
 //	p3.Id = "p3"
-//	m := core.Manager{
+//	m := core.manager{
 //		Players: core.Players{
 //			p1, p2, p3,
 //		},

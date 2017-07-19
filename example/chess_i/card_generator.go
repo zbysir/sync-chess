@@ -1,6 +1,10 @@
 package chess_i
 
-import "github.com/bysir-zl/sync-chess/chess"
+import (
+	"github.com/bysir-zl/sync-chess/chess"
+	"math/rand"
+	"github.com/bysir-zl/sync-chess/example/conf"
+)
 
 type CardGenerator struct {
 	cards chess.Cards
@@ -13,8 +17,15 @@ func (p *CardGenerator) Reset() {
 }
 
 func (p *CardGenerator) Shuffle() {
-	// todo shuffle
-	// dev mode can do not this
+	if conf.StdApp.RunModel == "dev" {
+		return
+	}
+
+	l := len(p.cards)
+	for i := range p.cards {
+		j := rand.Intn(l)
+		p.cards[i], p.cards[j] = p.cards[j], p.cards[i]
+	}
 }
 
 func (p *CardGenerator) GetCardsSurplus() (cards chess.Cards) {
@@ -29,7 +40,8 @@ func (p *CardGenerator) GetCards(length int) (cards chess.Cards, ok bool) {
 	if len(p.cards) < length {
 		return
 	}
-	cards = p.cards[:length]
+	cards = make(chess.Cards, length)
+	copy(cards, p.cards[:length])
 	p.cards = p.cards[length:]
 	ok = true
 	return

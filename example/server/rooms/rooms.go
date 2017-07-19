@@ -83,9 +83,6 @@ func init() {
 	pl := chess_i.NewPlayerLeader()
 	mh := chess_i.NewMessageHandler()
 	m := chess.NewManager("1", cg, pl, mh)
-	//
-	pl.Manager = m
-	Managers["1"] = m
 
-	m.Init()
+	Managers["1"] = m
 }

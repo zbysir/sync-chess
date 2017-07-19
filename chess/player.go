@@ -8,7 +8,7 @@ type Player interface {
 
 	// 获能进行的动作,应该根据手上的牌判断返回
 	// isRounder是否该你出牌
-	// card 别人打的牌
+	// card 别人打的牌,在自己摸牌后这个值0
 	CanActions(isRounder bool, card Card) ActionTypes
 
 	// 当玩家超时, 或者亮倒时, 执行自动打牌
@@ -25,31 +25,3 @@ type Player interface {
 	Unmarshal(bs []byte) (err error)
 }
 
-type ActionFrom int32
-
-const (
-	AF_Auto    ActionFrom = iota + 1 // 自动打牌
-	AF_Player                        // 来至玩家
-	AF_Storage                       // 来至存档
-)
-
-func (p ActionFrom) String() string {
-	s := ""
-	switch p {
-	case AF_Auto:
-		s = "Auto"
-	case AF_Player:
-		s = "Player"
-	case AF_Storage:
-		s = "storage"
-	}
-	return s
-}
-
-// 玩家动作请求
-type PlayerActionRequest struct {
-	Types      ActionType `json:"Types"`
-	Cards      Cards `json:"Cards"` // 动作哪几张牌, 比如亮倒隐藏刻子时有用
-	Card       Card  `json:"Card"`  // 动作哪张牌
-	ActionFrom ActionFrom
-}

@@ -3,6 +3,7 @@ package chess
 type ActionType uint16
 type ActionTypes []ActionType
 
+// 定义了基本打牌动作, 如有其它的可再定义
 const (
 	AT_Get         ActionType = iota + 1 // 摸牌, 服务器不会下发这个命令 而是自动(比如杠牌后)下发通知告知玩家摸了那张牌
 	AT_Play                              // 出牌
@@ -52,4 +53,34 @@ func (p *ActionTypes) Contain(a ActionType) bool {
 		}
 	}
 	return false
+}
+
+// 动作来至哪
+type ActionFrom int32
+
+const (
+	AF_Auto    ActionFrom = iota + 1 // 自动打牌
+	AF_Player                        // 来至玩家
+	AF_Storage                       // 来至存档
+)
+
+func (p ActionFrom) String() string {
+	s := ""
+	switch p {
+	case AF_Auto:
+		s = "Auto"
+	case AF_Player:
+		s = "Player"
+	case AF_Storage:
+		s = "storage"
+	}
+	return s
+}
+
+// 玩家动作请求
+type PlayerActionRequest struct {
+	Types      ActionType `json:"Types"`
+	Cards      Cards `json:"Cards"` // 动作哪几张牌, 比如亮倒隐藏刻子时有用
+	Card       Card  `json:"Card"`  // 动作哪张牌
+	ActionFrom ActionFrom
 }

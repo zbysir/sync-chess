@@ -24,6 +24,10 @@ type Step struct {
 	ActionRequest *PlayerActionRequest
 }
 
+func (p *Storage) Mount(m *Manager) {
+	p.manager = m
+}
+
 // 保存每轮开始(出牌玩家开始出牌之前)快照
 func (p *Storage) SnapShoot() {
 	players := p.manager.Players
@@ -49,9 +53,9 @@ func (p *Storage) SnapShoot() {
 }
 
 // 恢复快照,并且读取待运行的操作
+// 拉取所有记录, 找到最近一次SnapShoot并恢复
+// 将Step记录转换为manager.AutoAction, 当有AutoAction时manager不在询问player而是自动action
 func (p *Storage) Recovery() (has bool) {
-	// 拉取所有记录, 找到最近一次SnapShoot并恢复
-	// 将Step记录转换为manager.AutoAction, 当有AutoAction时manager不在询问player而是自动action
 	ss, err := Redis.LRANGE(p.manager.Id, 0, -1)
 	if err != nil {
 		log.Error("Recovery ERR: ", err)
@@ -63,6 +67,7 @@ func (p *Storage) Recovery() (has bool) {
 		bs := ss[i].([]byte)
 		switch bs[0] {
 		case 1:
+			// SnapShoot
 			snap := SnapShoot{}
 			err := snap.Unmarshal(bs[1:], p.manager.playerLeader.PlayerCreator)
 			if err != nil {
@@ -76,6 +81,7 @@ func (p *Storage) Recovery() (has bool) {
 			log.Info("storage Recovery", snap)
 			has = true
 		case 2:
+			// Step
 			step := &Step{}
 			err := step.Unmarshal(bs[1:])
 			if err != nil {
@@ -89,7 +95,7 @@ func (p *Storage) Recovery() (has bool) {
 		}
 	}
 
-	// 处理step
+	// 存储step
 	for _, step := range steps {
 		if _, ok := p.playerActionC[step.PlayerId]; !ok {
 			p.playerActionC[step.PlayerId] = make(chan *PlayerActionRequest, 100)
@@ -236,9 +242,8 @@ func (s *Step) Unmarshal(bs []byte) (err error) {
 	return
 }
 
-func NewStorage(manager *Manager) *Storage {
+func NewStorage() *Storage {
 	return &Storage{
-		manager:       manager,
 		playerActionC: map[string]chan *PlayerActionRequest{},
 	}
 }

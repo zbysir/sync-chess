@@ -10,5 +10,5 @@ const (
 	CMD_ActionRsp       = 1001
 	CMD_ActionFormOther = 1002
 	CMD_RoomInfo        = 1003
-	CMD_PlayerCards        = 1004
+	CMD_PlayerCards     = 1004
 )

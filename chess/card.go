@@ -5,7 +5,7 @@ import (
 )
 
 // 麻将?
-
+// 一共 27+4+3 = 34 种牌
 type Card uint16
 
 var (
@@ -50,7 +50,8 @@ func (p *Cards) Append(card Card) {
 
 func (p *Cards) Delete(card Card) bool {
 	if index := p.Index(card); index != -1 {
-		*p = append((*p)[:index], (*p)[index+1:]...)
+		cStar:=append(Cards{},(*p)[:index]...)
+		*p = append(cStar, (*p)[index+1:]...)
 		return true
 	}
 	return false

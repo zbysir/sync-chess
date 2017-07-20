@@ -10,7 +10,7 @@ import (
 
 var connManager = server.GetConnManager()
 
-func  NotifyNeedAction(playerId string, actions chess.ActionTypes) {
+func NotifyNeedAction(playerId string, actions chess.ActionTypes) {
 	log.Info("NeedAction", "%s %+v", playerId, actions)
 	s := struct {
 		Cmd     int

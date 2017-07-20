@@ -108,9 +108,9 @@ func (p *Storage) Recovery() (has bool) {
 }
 
 // 保存玩家操作日志
-func (p *Storage) Step(player Player, request *PlayerActionRequest) {
+func (p *Storage) Step(playerId string, request *PlayerActionRequest) {
 	s := Step{
-		PlayerId:      player.GetId(),
+		PlayerId:      playerId,
 		ActionRequest: request,
 	}
 	sBs, err := json.Marshal(&s)
@@ -123,7 +123,7 @@ func (p *Storage) Step(player Player, request *PlayerActionRequest) {
 
 	Redis.RPUSH(p.manager.Id, bs)
 
-	log.Info("storage Step ", player, request)
+	log.Info("storage Step ", playerId, request)
 }
 
 // 清空这局存档

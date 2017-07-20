@@ -17,6 +17,7 @@ type Player struct {
 	Hu          Hu
 
 	manager *chess.Manager
+	actionLog []*chess.PlayerActionRequest
 }
 
 func (p *Player) GetId() (string) {
@@ -270,6 +271,7 @@ func (p *Player) GangBu() (err error) {
 		err = errors.New("sb")
 		return
 	}
+	p.Cards.Delete(card)
 
 	p.GangCards.Add(&Gang{
 		Card:  card,

@@ -26,7 +26,7 @@ var (
 
 func (p Card) String() string {
 	s := "ERR"
-	if p==0{
+	if p == 0 {
 		s = "0"
 	} else if p < C_Tiao[0] {
 		s = fmt.Sprint("筒", int(p-C_Tong[0]+1))
@@ -44,13 +44,25 @@ func (p Card) String() string {
 
 type Cards []Card
 
+func (p *Cards) Len() int {
+	return len(*p)
+}
+
+func (p *Cards) Less(i, j int) bool {
+	return (*p)[i] < (*p)[j]
+}
+
+func (p *Cards) Swap(i, j int) {
+	(*p)[i], (*p)[j] = (*p)[j], (*p)[i]
+}
+
 func (p *Cards) Append(card Card) {
 	*p = append(*p, card)
 }
 
 func (p *Cards) Delete(card Card) bool {
 	if index := p.Index(card); index != -1 {
-		cStar:=append(Cards{},(*p)[:index]...)
+		cStar := append(Cards{}, (*p)[:index]...)
 		*p = append(cStar, (*p)[index+1:]...)
 		return true
 	}

@@ -84,5 +84,5 @@ func init() {
 	mh := chess_i.NewMessageHandler()
 	m := chess.NewManager("1", cg, pl, mh)
 
-	Managers["1"] = m
+	Managers[m.Id] = m
 }

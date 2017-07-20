@@ -10,7 +10,7 @@
     <div class="desk">
         <div class="player" v-for="(player,playerIndex) in players">
             <div class="hand-cards">
-                <div class="card" :style="{height:$index==chooseCardIndex&&playerIndex==0?'50px':'30px'}"
+                <div class="card" :class="{'choose':$index==chooseCardIndex&&playerIndex==0}"
                      v-for="(card,$index) in player.Cards" @click="choose($index)">{{card}}
                 </div>
             </div>
@@ -154,7 +154,7 @@
                         // 碰
                         var index = p.Cards.indexOf(card)
                         p.Cards.splice(index, 1)
-                        var index = p.Cards.indexOf(card)
+                        index = p.Cards.indexOf(card)
                         p.Cards.splice(index, 1)
 
                         p.Pengs.push(card)
@@ -163,15 +163,27 @@
                         // 暗杠
                         var index = p.Cards.indexOf(card)
                         p.Cards.splice(index, 1)
-                        var index = p.Cards.indexOf(card)
+                        index = p.Cards.indexOf(card)
                         p.Cards.splice(index, 1)
-                        var index = p.Cards.indexOf(card)
+                        index = p.Cards.indexOf(card)
                         p.Cards.splice(index, 1)
-                        var index = p.Cards.indexOf(card)
+                        index = p.Cards.indexOf(card)
                         p.Cards.splice(index, 1)
 
                         p.Gangs.push({Card:card})
                         break
+                    case 6:
+                        // 补杠
+                        // 删除手牌
+                        var index = p.Cards.indexOf(card)
+                        p.Cards.splice(index, 1)
+
+                        // 删除碰牌
+                        index = p.Pengs.indexOf(card)
+                        p.Pengs.splice(index, 1)
+
+                        // 添加杠
+                        p.Gangs.push({Card:card})
                     case 1:
                         p.Cards.push(card)
                         break
@@ -198,6 +210,15 @@
                         // 暗杠
                         p.Gangs.push({Card:card})
                         p.Cards.splice(0, 4)
+                        break
+                    case 6:
+                        // 补杠
+                        p.Gangs.push({Card:card})
+                        p.Cards.splice(0, 1)
+
+                        // 删除碰牌
+                        index = p.Pengs.indexOf(card)
+                        p.Pengs.splice(index, 1)
                         break
                     case 1:
                         // 摸牌
@@ -310,8 +331,8 @@
         display: inline-block;
     }
 
-    .player:nth-child(1) .played-cards {
-        float: left;
+    .player:nth-child(1) .card.choose {
+        height: 40px;
     }
 
     /*--*/
@@ -321,6 +342,9 @@
         background-color: #5a84ff;
         flex-direction: row-reverse;
     }
+    .player:nth-child(2) .hand-cards .card {
+        height: 20px;
+    }
 
     /*--*/
 
@@ -329,20 +353,11 @@
         background-color: #5a84ff;
         flex-direction: row;
     }
+    .player:nth-child(3) .hand-cards .card {
+        height: 20px;
+    }
 
     /*--*/
-
-    .card-back-left {
-        width: 30px;
-        height: 30px;
-        background-color: #5a84ff;
-    }
-
-    .card-back-right {
-        width: 30px;
-        height: 30px;
-        background-color: #5a84ff;
-    }
 
     /*--*/
 

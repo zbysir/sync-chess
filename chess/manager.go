@@ -9,7 +9,7 @@ import (
 
 // 管理员管理整个打牌逻辑
 // 命令该谁出牌
-// 一个房间一个Manager
+// 一个房间一个Manager, 每次牌局都应该重置manager
 type Manager struct {
 	Id                string       // 管理员唯一标示
 	storage           *Storage     // 存档器
@@ -322,8 +322,12 @@ func (p *Manager) Wait() {
 
 // 玩家成功动作后记录
 func (p *Manager) doActionAfter(player Player, action *PlayerActionRequest, ) {
+	// 如果是存档来的, 说明已经记录过了
 	if action.ActionFrom != AF_Storage {
-		p.storage.Step(player, action)
+		// 存档
+		p.storage.Step(player.GetId(), action)
+		// 存回放
+
 	}
 }
 
@@ -336,8 +340,9 @@ func (p *Manager) getCard(player Player) (err error) {
 	}
 	card := cards[0]
 	action := &PlayerActionRequest{
-		Card:  card,
-		Types: AT_Get,
+		Card:       card,
+		Types:      AT_Get,
+		ActionFrom: AF_Auto,
 	}
 	err = player.DoAction(action, player)
 	if err != nil {

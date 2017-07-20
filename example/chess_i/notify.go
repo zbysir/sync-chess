@@ -21,12 +21,7 @@ func NotifyNeedAction(playerId string, actions chess.ActionTypes) {
 	}
 	bs, _ := json.Marshal(s)
 
-	cs := connManager.ConnByTopic(GetTopicUid(playerId))
-	if len(cs) == 0 {
-		return
-	}
-	conn := cs[0]
-	conn.Write(bs)
+	connManager.SendToTopic(GetTopicUid(playerId), bs, nil)
 }
 
 func NotifyActionResponse(playerId string, action *chess.PlayerActionRequest) () {
@@ -89,12 +84,7 @@ func NotifyFromOtherPlayerAction(playerIdFrom string, playerIdTo []string, actio
 		if playerId == playerIdFrom {
 			continue
 		}
-		cs := connManager.ConnByTopic(GetTopicUid(playerId))
-		if len(cs) == 0 {
-			continue
-		}
-		conn := cs[0]
-		conn.Write(bs)
+		connManager.SendToTopic(GetTopicUid(playerId), bs, nil)
 	}
 }
 
@@ -120,11 +110,7 @@ func NotifyRoom(m *chess.Manager, uid string) {
 	}
 
 	bs, _ := json.Marshal(s)
-	cs := connManager.ConnByTopic(GetTopicUid(uid))
-	if len(cs) == 0 {
-		return
-	}
-	cs[0].Write(bs)
+	connManager.SendToTopic(GetTopicUid(uid), bs, nil)
 }
 
 func NotifyPlayerCards(m *chess.Manager, uid string) {
@@ -149,11 +135,7 @@ func NotifyPlayerCards(m *chess.Manager, uid string) {
 	}
 
 	bs, _ := json.Marshal(s)
-	cs := connManager.ConnByTopic(GetTopicUid(uid))
-	if len(cs) == 0 {
-		return
-	}
-	cs[0].Write(bs)
+	connManager.SendToTopic(GetTopicUid(uid), bs, nil)
 }
 
 func GetTopicUid(uid string) string {

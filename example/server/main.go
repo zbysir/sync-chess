@@ -2,38 +2,36 @@ package main
 
 import (
 	"github.com/bysir-zl/hubs/core/net/listener"
-	"context"
 	"github.com/bysir-zl/bygo/log"
-	"github.com/bysir-zl/hubs/core/server"
 	"time"
 	"github.com/bysir-zl/bjson"
 	"github.com/bysir-zl/hubs/core/net/conn_wrap"
-	"github.com/bysir-zl/sync-chess/example/server/rooms"
 	"github.com/bysir-zl/sync-chess/chess"
 	"github.com/bysir-zl/sync-chess/example/chess_i"
+	"github.com/bysir-zl/hubs/core/hubs"
+	"github.com/bysir-zl/sync-chess/example/server/rooms"
 )
 
 func main() {
-	Run()
-}
-
-func Run() {
 	l := listener.NewWs()
-	ctx := context.Background()
 
-	log.Info("server", "running")
-	server.Run(ctx, "127.0.0.1:10010", l, handler)
+	log.InfoT("server", "running")
+	s := hubs.New("127.0.0.1:10010", l, handler)
+	chess_i.Hub = s
+	s.Run()
 }
 
-func handler(con conn_wrap.Interface) {
+func handler(s *hubs.Server, con conn_wrap.Interface) {
 	log.Info("conn")
 
+	// 玩家id
 	var uid = ""
-	var room_id = ""
+	// 玩家加入的房间
+	var rom *rooms.Room
 
 	go func() {
 		time.Sleep(5 * time.Second)
-		if uid == "" {
+		if rom == nil {
 			con.Close()
 		}
 	}()
@@ -49,7 +47,7 @@ func handler(con conn_wrap.Interface) {
 		}
 		cmd := bj.Pos("Cmd").Int()
 
-		if cmd != 0 && uid == "" {
+		if cmd != 0 && rom == nil {
 			break
 		}
 
@@ -62,36 +60,38 @@ func handler(con conn_wrap.Interface) {
 				break
 			}
 
-			room_id = bj.Pos("RoomId").String()
-			con.Subscribe("uid" + uid)
+			s.Subscribe(con, "uid"+uid)
+			roomId := bj.Pos("RoomId").String()
 
-			err := rooms.JoinRoom(room_id, uid)
+			r, err := rooms.FindOrCreateRoom(roomId)
+			if err != nil {
+				return
+			}
+			rom = r
+			err = rom.JoinRoom(uid)
 			if err != nil {
 				// 重连
 				if err == chess.ERR_JoinRoomPlayerExist {
-					rooms.SendRoom(room_id, uid)
-					rooms.SendLastActions(room_id, uid)
+					rom.SendRoom(uid)
+					rom.SendLastActions(uid)
 				} else {
 					log.Info("joinRoom Err", err)
 					break
 				}
 			}
 
-			log.Info("login", uid)
-			log.Info("joinRoom", room_id)
+			log.InfoT("login", uid)
+			log.InfoT("joinRoom", roomId)
 
 		case chess_i.CMD_Action:
 			// 打牌动作
 			action := chess.PlayerActionRequest{}
 			err := bj.Pos("Action").Object(&action)
 			log.Info("action", action, err)
-			rooms.WriteAction(room_id, uid, &action)
-		}
-		if cmd == 0 {
-			con.SetValue("uid", bj.Pos("Body").Int())
+			rom.WriteAction(uid, &action)
 		}
 
-		log.Info("read", string(bs))
+		log.InfoT("read", string(bs))
 
 		con.Write([]byte("SB"))
 	}
@@ -99,7 +99,8 @@ func handler(con conn_wrap.Interface) {
 	log.Info("close", uid)
 
 	if uid != "" {
-		err := rooms.Leave(room_id, uid)
+		err := rom.Leave(uid)
+		s.UnSubscribe(con, "uid"+uid)
 		log.Info("room Leave", err)
 	}
 }

@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"github.com/bysir-zl/bygo/log"
 	"fmt"
-	"github.com/bysir-zl/hubs/core/server"
+	"github.com/bysir-zl/hubs/core/hubs"
 )
-
-var connManager = server.GetConnManager()
+var Hub *hubs.Server
 
 func NotifyNeedAction(playerId string, actions chess.ActionTypes) {
-	log.Info("NeedAction", "%s %+v", playerId, actions)
+	log.InfoT("NeedAction", "%s %+v", playerId, actions)
 	s := struct {
 		Cmd     int
 		Actions chess.ActionTypes
@@ -21,7 +20,7 @@ func NotifyNeedAction(playerId string, actions chess.ActionTypes) {
 	}
 	bs, _ := json.Marshal(s)
 
-	connManager.SendToTopic(GetTopicUid(playerId), bs, nil)
+	Hub.SendToTopic(GetTopicUid(playerId), bs, nil)
 }
 
 func NotifyActionResponse(playerId string, action *chess.PlayerActionRequest) () {
@@ -29,7 +28,7 @@ func NotifyActionResponse(playerId string, action *chess.PlayerActionRequest) ()
 		return
 	}
 
-	log.Info("ResponseAction", "=>", playerId, action)
+	log.InfoT("ResponseAction", "=>", playerId, action)
 	s := struct {
 		Cmd    int
 		Action *chess.PlayerActionRequest
@@ -39,7 +38,7 @@ func NotifyActionResponse(playerId string, action *chess.PlayerActionRequest) ()
 	}
 	bs, _ := json.Marshal(s)
 
-	cs := connManager.ConnByTopic(GetTopicUid(playerId))
+	cs := Hub.ConnByTopic(GetTopicUid(playerId))
 	if len(cs) == 0 {
 		return
 	}
@@ -60,7 +59,7 @@ func NotifyFromOtherPlayerAction(playerIdFrom string, playerIdTo []string, actio
 		return
 	}
 
-	log.Info("NotifyFromOtherPlayerAction", "from", playerIdFrom, "to", playerIdTo)
+	log.InfoT("NotifyFromOtherPlayerAction", "from", playerIdFrom, "to", playerIdTo)
 
 	notice := &PlayerActionNotice{
 		Card:         action.Card,
@@ -84,7 +83,7 @@ func NotifyFromOtherPlayerAction(playerIdFrom string, playerIdTo []string, actio
 		if playerId == playerIdFrom {
 			continue
 		}
-		connManager.SendToTopic(GetTopicUid(playerId), bs, nil)
+		Hub.SendToTopic(GetTopicUid(playerId), bs, nil)
 	}
 }
 
@@ -110,7 +109,7 @@ func NotifyRoom(m *chess.Manager, uid string) {
 	}
 
 	bs, _ := json.Marshal(s)
-	connManager.SendToTopic(GetTopicUid(uid), bs, nil)
+	Hub.SendToTopic(GetTopicUid(uid), bs, nil)
 }
 
 func NotifyPlayerCards(m *chess.Manager, uid string) {
@@ -135,7 +134,7 @@ func NotifyPlayerCards(m *chess.Manager, uid string) {
 	}
 
 	bs, _ := json.Marshal(s)
-	connManager.SendToTopic(GetTopicUid(uid), bs, nil)
+	Hub.SendToTopic(GetTopicUid(uid), bs, nil)
 }
 
 func GetTopicUid(uid string) string {

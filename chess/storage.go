@@ -49,7 +49,7 @@ func (p *Storage) SnapShoot() {
 
 	Redis.RPUSH(p.manager.Id, bs)
 
-	log.Info("storage SnapShoot ", s)
+	log.InfoT("storage SnapShoot ", s)
 }
 
 // 恢复快照,并且读取待运行的操作
@@ -78,7 +78,7 @@ func (p *Storage) Recovery() (has bool) {
 			p.manager.RoundStartPlayer, _ = p.manager.Players.Find(snap.RoundStartPlayerId)
 			p.manager.CardGenerator.SetCardsSurplus(snap.SurplusCards)
 
-			log.Info("storage Recovery", snap)
+			log.InfoT("storage Recovery", snap)
 			has = true
 		case 2:
 			// Step
@@ -123,7 +123,7 @@ func (p *Storage) Step(playerId string, request *PlayerActionRequest) {
 
 	Redis.RPUSH(p.manager.Id, bs)
 
-	log.Info("storage Step ", playerId, request)
+	log.InfoT("storage Step ", playerId, request)
 }
 
 // 清空这局存档

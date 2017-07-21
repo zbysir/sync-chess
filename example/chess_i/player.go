@@ -5,7 +5,6 @@ import (
 	"errors"
 	"encoding/json"
 	"fmt"
-	"github.com/bysir-zl/bygo/log"
 )
 
 type Player struct {
@@ -16,7 +15,7 @@ type Player struct {
 	GangCards   Gangs       // 杠的牌
 	Hu          Hu
 
-	manager *chess.Manager
+	manager   *chess.Manager
 	actionLog []*chess.PlayerActionRequest
 }
 
@@ -142,7 +141,6 @@ func (p *Player) CanPeng(card chess.Card) (ok bool) {
 			count++
 		}
 	}
-	log.Info("CanPeng", count)
 	// 手上有3张也是能碰的 :-D
 	ok = count >= 2
 	return

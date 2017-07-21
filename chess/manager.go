@@ -79,7 +79,7 @@ func (p *Manager) Start() {
 			p.notifyNeedAction(p.RoundStartPlayer, as)
 			goto getRoundPlayerAction
 		}
-		log.Info("getPlayerAction", "%+v %+v", p.RoundStartPlayer, a)
+		log.InfoT("getPlayerAction", "%+v %+v", p.RoundStartPlayer, a)
 
 		switch a.Types {
 		case AT_Play:

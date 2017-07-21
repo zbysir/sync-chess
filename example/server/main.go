@@ -22,7 +22,7 @@ func main() {
 }
 
 func handler(s *hubs.Server, con conn_wrap.Interface) {
-	log.Info("conn")
+	log.InfoT("conn")
 
 	// 玩家id
 	var uid = ""
@@ -87,7 +87,7 @@ func handler(s *hubs.Server, con conn_wrap.Interface) {
 			// 打牌动作
 			action := chess.PlayerActionRequest{}
 			err := bj.Pos("Action").Object(&action)
-			log.Info("action", action, err)
+			log.InfoT("action", action, err)
 			rom.WriteAction(uid, &action)
 		}
 
@@ -96,7 +96,7 @@ func handler(s *hubs.Server, con conn_wrap.Interface) {
 		con.Write([]byte("SB"))
 	}
 
-	log.Info("close", uid)
+	log.InfoT("close", uid)
 
 	if uid != "" {
 		err := rom.Leave(uid)

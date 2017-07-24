@@ -46,6 +46,7 @@ func (p *Manager) Start() {
 	if p.isStarted {
 		return
 	}
+
 	p.isStarted = true
 
 	if len(p.Players) == 0 {
@@ -59,6 +60,7 @@ func (p *Manager) Start() {
 		p.startGame()
 	}
 
+	p.MessageHandler.OnGameStart()
 	go func() {
 	startRound:
 
@@ -286,6 +288,7 @@ func (p *Manager) Start() {
 	end:
 		p.clear()
 		log.Info("end ")
+		p.MessageHandler.OnGameEnd()
 		return
 	}()
 }

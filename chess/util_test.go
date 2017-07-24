@@ -7,8 +7,8 @@ func TestIsHu(t *testing.T) {
 				   C_Tong[1], C_Tong[1], C_Tong[1],
 				   C_Tong[2], C_Tong[3], C_Tong[4],
 				   C_Tong[6], C_Tong[6], C_Tong[6],
-				   C_Tiao[8], C_Tiao[8],
+				   C_Tiao[7], C_Tiao[8],
 	}
-	can := IsHu(cards, 0)
+	can := IsHu(cards,C_Tiao[8])
 	t.Log(can)
 }

@@ -4,12 +4,11 @@ import (
 	"fmt"
 )
 
-// 麻将?
 // 一共 27+4+3 = 34 种牌
 type Card uint16
 
 var (
-	C_Tong map[int]Card // 1-9筒 从0开始计数
+	C_Tong map[int]Card // 1-9筒 从0开始计数 对应的是1筒 card=1
 	C_Tiao map[int]Card // 1-9条 从0开始计数
 	C_Wan  map[int]Card // 1-9万 从0开始计数
 	C_Feng map[int]Card // 东南西北 从0开始计数

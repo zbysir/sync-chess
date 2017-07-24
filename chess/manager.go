@@ -356,7 +356,7 @@ func (p *Manager) getCard(player Player) (err error) {
 
 func (p *Manager) startGame() {
 	// 选庄家
-	p.RoundStartPlayer = p.Players[0]
+	p.RoundStartPlayer = p.playerLeader.Banker(p.Players)
 	p.CardGenerator.Reset()
 	p.CardGenerator.Shuffle()
 
